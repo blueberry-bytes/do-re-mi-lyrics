@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Windows;
@@ -10,7 +12,6 @@ using Do_Re_Mi_Lyrics.Models;
 using Do_Re_Mi_Lyrics.Properties;
 using Do_Re_Mi_Lyrics.Views;
 using Microsoft.Win32;
-using Application = Do_Re_Mi_Lyrics.Models.Application;
 
 namespace Do_Re_Mi_Lyrics.ViewModels;
 
@@ -18,27 +19,21 @@ public class MainWindowViewModel : INotifyPropertyChanged
 {
     internal double LineHeight;
     internal double ScrollViewerHeight;
-    private readonly DispatcherTimer _playTimer = new(DispatcherPriority.Send) {Interval = new TimeSpan(0, 0, 0, 0, 100)};
-    private readonly List<Lyrics> _redoList = new();
-    private readonly List<Lyrics> _undoList = new();
-    private readonly Window _window;
-    private string _audioFilePath = "Open audio file";
-    private int _caretIndex;
-    private bool _isEditMode;
-    private string _lyricsFilePath = "Open or paste lyrics";
-    private string _lyricsText = "";
-    private string _playPauseIconPath = @"..\Images\play.png";
-    private string _playPauseText = "Play (Space)";
-    private double _scrollViewerPosition;
 
+    private readonly DispatcherTimer
+        _playTimer = new(DispatcherPriority.Send) {Interval = new TimeSpan(0, 0, 0, 0, 10)};
+
+    private readonly List<Lyrics> _redoList = [];
+    private readonly List<Lyrics> _undoList = [];
+    private readonly Window _window;
 
     public MainWindowViewModel(Window window)
     {
         _window = window;
         _playTimer.Tick += PlayTimerTick;
-        Application.Lyrics = new Lyrics();
-        Application.Audio = new Audio();
-        Application.MainWindowViewModel = this;
+        Global.Lyrics = new Lyrics();
+        Global.Audio = new Audio();
+        Global.MainWindowViewModel = this;
         PlayTempo = Settings.Default.Tempo;
         PlayVolume = Settings.Default.Volume;
         if (Settings.Default.AudioFilePath != "")
@@ -64,10 +59,9 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string CurrentTimeText => Application.Audio.CurrentTimeText;
+    public string CurrentTimeText => Global.Audio.CurrentTimeText;
 
     public bool IsAudioFileLoaded => AudioFilePath != "Open audio file";
-    public bool IsLyricsFileLoaded => LyricsFilePath != "Open or paste lyrics";
     public bool IsRedoEnabled => _redoList.Count > 0;
     public bool IsUndoEnabled => _undoList.Count > 1;
 
@@ -80,101 +74,111 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public Audio Audio
     {
-        get => Application.Audio;
+        get => Global.Audio;
         set
         {
-            Application.Audio = value;
+            Global.Audio = value;
             OnPropertyChanged();
         }
     }
 
     public string AudioFilePath
     {
-        get => _audioFilePath;
-        set
+        get;
+        private set
         {
-            _audioFilePath = value;
+            field = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsAudioFileLoaded));
         }
-    }
+    } = "Open audio file";
 
     public int CaretIndex
     {
-        get => _caretIndex;
+        get;
         set
         {
-            _caretIndex = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool IsEditMode
     {
-        get => _isEditMode;
+        get;
         set
         {
-            _isEditMode = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
-    public Lyrics Lyrics
+    public bool IsSaved
     {
-        get => Application.Lyrics;
+        get;
         set
         {
-            Application.Lyrics = value;
+            field = value;
+            OnPropertyChanged();
+        }
+    } = true;
+
+    public Lyrics Lyrics
+    {
+        get => Global.Lyrics;
+        private set
+        {
+            Global.Lyrics = value;
             OnPropertyChanged();
         }
     }
 
     public string LyricsFilePath
     {
-        get => _lyricsFilePath;
-        set
+        get;
+        private set
         {
-            _lyricsFilePath = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "Open or paste lyrics";
 
     public string LyricsText
     {
-        get => _lyricsText;
+        get;
         set
         {
-            _lyricsText = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
     public string PlayPauseIconPath
     {
-        get => _playPauseIconPath;
-        set
+        get;
+        private set
         {
-            _playPauseIconPath = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = @"..\Images\play.png";
 
     public string PlayPauseText
     {
-        get => _playPauseText;
-        set
+        get;
+        private set
         {
-            _playPauseText = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "Play (Space)";
 
     public long PlaySliderPosition
     {
-        get => (int) Application.Audio.CurrentTime.TotalMilliseconds;
+        get => (int) Global.Audio.CurrentTime.TotalMilliseconds;
         set
         {
-            Application.Audio.CurrentTime = TimeSpan.FromMilliseconds(value);
+            Global.Audio.CurrentTime = TimeSpan.FromMilliseconds(value);
 
             OnPropertyChanged();
             OnPropertyChanged(nameof(CurrentTimeText));
@@ -185,10 +189,10 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public double PlayTempo
     {
-        get => Application.Audio.Tempo;
+        get => Global.Audio.Tempo;
         set
         {
-            Application.Audio.Tempo = value;
+            Global.Audio.Tempo = value;
             Settings.Default.Tempo = value;
             Settings.Default.Save();
             OnPropertyChanged();
@@ -198,10 +202,10 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public float PlayVolume
     {
-        get => Application.Audio.Volume;
+        get => Global.Audio.Volume;
         set
         {
-            Application.Audio.Volume = value;
+            Global.Audio.Volume = value;
             Settings.Default.Volume = value;
             Settings.Default.Save();
             OnPropertyChanged();
@@ -211,13 +215,15 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public double ScrollViewerPosition
     {
-        get => _scrollViewerPosition;
+        get;
         set
         {
-            _scrollViewerPosition = value;
+            field = value;
             OnPropertyChanged();
         }
     }
+
+    private bool IsLyricsFileLoaded => LyricsFilePath != "Open or paste lyrics";
 
     public void OpenAudioFile()
     {
@@ -293,7 +299,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
             string text = Lyrics.GetLyricsText(out _);
             File.WriteAllText(LyricsFilePath, text, Encoding.UTF8);
-            Application.IsSaved = true;
+            IsSaved = true;
         }
         catch (Exception ex)
         {
@@ -312,7 +318,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
             {
                 Filter = "Lyrics (*.lrc)|*.lrc",
                 InitialDirectory = Settings.Default.LyricsFilesPath,
-                FileName = IsLyricsFileLoaded ? Path.GetFileNameWithoutExtension(LyricsFilePath) : IsAudioFileLoaded ? Path.GetFileNameWithoutExtension(AudioFilePath) : ""
+                FileName = IsLyricsFileLoaded ? Path.GetFileNameWithoutExtension(LyricsFilePath) :
+                    IsAudioFileLoaded ? Path.GetFileNameWithoutExtension(AudioFilePath) : ""
             };
             if (!sfd.ShowDialog(_window)!.Value)
             {
@@ -325,7 +332,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
             Settings.Default.LyricsFilePath = LyricsFilePath;
             Settings.Default.LyricsFilesPath = Path.GetDirectoryName(LyricsFilePath);
             Settings.Default.Save();
-            Application.IsSaved = true;
+            IsSaved = true;
         }
         catch (Exception ex)
         {
@@ -359,12 +366,13 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
-            if (Application.IsSaved)
+            if (IsSaved)
             {
                 return true;
             }
 
-            MessageBoxResult result = MessageBox.Show(_window, "Zapisać zmiany?", "Zmiany", MessageBoxButton.YesNoCancel);
+            MessageBoxResult result =
+                MessageBox.Show(_window, "Save changes?", "Changes", MessageBoxButton.YesNoCancel);
             return result switch
             {
                 MessageBoxResult.Yes => IsLyricsFileLoaded ? SaveLyrics() : SaveLyricsToNewFile(),
@@ -389,7 +397,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         TimeSpan timeSpan = Lyrics.GetCurrentWordStartTime();
 
-        PlaySliderPosition = (long) (timeSpan - TimeSpan.FromSeconds(3)).TotalMilliseconds;
+        PlaySliderPosition = (long) (timeSpan - TimeSpan.FromSeconds(3 * PlayTempo)).TotalMilliseconds;
         Audio.Play();
     }
 
@@ -402,6 +410,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         Lyrics.ParseLyrics("");
         LyricsFilePath = "Open or paste lyrics";
+        IsSaved = true;
     }
 
     public void ParseLyricsFromClipboard()
@@ -413,15 +422,11 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         string text = Clipboard.GetText();
         Lyrics.ParseLyrics(text);
-        Application.IsSaved = false;
     }
 
     public void ShowAboutWindow()
     {
-        AboutWindow aboutWindow = new()
-        {
-            Owner = _window
-        };
+        AboutWindow aboutWindow = new() {Owner = _window};
         aboutWindow.ShowDialog();
     }
 
@@ -461,7 +466,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         {
             string cutLyricsText = LyricsText.Remove(CaretIndex);
             Lyrics tempLyrics = new();
-            tempLyrics.ParseLyrics(cutLyricsText);
+            tempLyrics.ParseLyrics(cutLyricsText, 0, true);
             int wordIndex = tempLyrics.WordCount;
             if (!cutLyricsText.EndsWith(" "))
             {
@@ -474,6 +479,16 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     internal void AddToUndoList()
     {
+        if (_undoList.Count > 0 && Lyrics.GetLyricsText(out int _) == _undoList[0].GetLyricsText(out int _))
+        {
+            return;
+        }
+
+        if (IsCalledByConstructor())
+        {
+            return;
+        }
+
         _undoList.Insert(0, Lyrics.Clone());
         while (_undoList.Count > 50)
         {
@@ -536,6 +551,12 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    private static bool IsCalledByConstructor()
+    {
+        return new StackTrace().GetFrames().Select(stackFrame => stackFrame.GetMethod()).Any(method =>
+            method != null && method is {IsConstructor: true, DeclaringType.Name: nameof(MainWindowViewModel)});
+    }
+
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
@@ -553,6 +574,6 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         string text = File.ReadAllText(LyricsFilePath);
         Lyrics.ParseLyrics(text);
-        Application.IsSaved = true;
+        IsSaved = true;
     }
 }

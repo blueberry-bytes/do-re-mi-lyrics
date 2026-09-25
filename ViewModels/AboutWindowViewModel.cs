@@ -19,7 +19,9 @@ public class AboutWindowViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public string NameVersion => $"{Assembly.GetEntryAssembly()?.GetName().Name} v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}";
+
+    public string NameVersion =>
+        $"{Assembly.GetEntryAssembly()?.GetName().Name} v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}";
 
     public void ShowLicense()
     {
@@ -36,10 +38,10 @@ public class AboutWindowViewModel : INotifyPropertyChanged
         _webBrowser.NavigateToString(GetEmbeddedResource("Do_Re_Mi_Lyrics.TextResources", "help.txt"));
     }
 
-    public string GetEmbeddedResource(string namespacename, string filename)
+    private static string GetEmbeddedResource(string namespaceName, string filename)
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
-        string resourceName = namespacename + "." + filename;
+        string resourceName = namespaceName + "." + filename;
 
         using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)

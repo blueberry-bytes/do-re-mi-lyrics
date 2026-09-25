@@ -39,7 +39,7 @@ public partial class AboutWindow : Window
 
     private void Url_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        OpenUrl("https://github.com/Woo-Cash/do-re-mi-lyrics");
+        OpenUrl("https://github.com/blueberry-bytes/do-re-mi-lyrics");
     }
 
     private void TextBlock_MouseDown(object sender, MouseButtonEventArgs e)
@@ -47,7 +47,7 @@ public partial class AboutWindow : Window
         OpenUrl("mailto:lukasz.przestrzelski@gmail.com");
     }
 
-    private void OpenUrl(string url)
+    private static void OpenUrl(string url)
     {
         try
         {

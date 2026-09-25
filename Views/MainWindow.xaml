@@ -3,17 +3,46 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:viewModels="clr-namespace:Do_Re_Mi_Lyrics.ViewModels"
-        xmlns:models="clr-namespace:Do_Re_Mi_Lyrics.Models"
         xmlns:helper="clr-namespace:Do_Re_Mi_Lyrics.Helper"
+        xmlns:models="clr-namespace:Do_Re_Mi_Lyrics.Models"
+        xmlns:viewModels="clr-namespace:Do_Re_Mi_Lyrics.ViewModels"
         mc:Ignorable="d" d:DataContext="{d:DesignInstance viewModels:MainWindowViewModel}"
-        Title="Do-Re-Mi Lyrics" Height="450" Width="800" WindowStartupLocation="CenterScreen" WindowState="Maximized" KeyDown="Window_KeyDown" Closing="Window_Closing" Icon="/Images/DO-RE-Mi-icon.ico">
+        Title="Do-Re-Mi Lyrics" Height="450" Width="800" WindowStartupLocation="CenterScreen" WindowState="Maximized"
+        KeyDown="Window_KeyDown" Closing="Window_Closing"
+        Icon="/Images/DO-RE-Mi-icon.ico" FontFamily="Calibri">
     <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="BorderBrush" Value="#FFCCCCCC" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="helper:FocusExtension.IsFocused" Value="False" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="FocusManager.FocusedElement"
+                            Value="{Binding RelativeSource={RelativeSource Self}}" />
+                    <Setter Property="FocusManager.IsFocusScope" Value="True" />
+                    <Setter Property="helper:FocusExtension.IsFocused" Value="True" />
+                </DataTrigger>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="FocusManager.FocusedElement"
+                            Value="{Binding RelativeSource={RelativeSource Self}}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="LineTime" TargetType="TextBlock">
             <d:Style.DataContext>
                 <x:Type Type="models:LyricsLine" />
             </d:Style.DataContext>
-            <Setter Property="FontFamily" Value="Calibri" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="LightGray" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -32,7 +61,6 @@
             <d:Style.DataContext>
                 <x:Type Type="models:LyricsWord" />
             </d:Style.DataContext>
-            <Setter Property="FontFamily" Value="Calibri" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="LightGray" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -60,7 +88,6 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="Word" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Calibri" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
         </Style>
@@ -68,7 +95,6 @@
             <d:Style.DataContext>
                 <x:Type Type="models:LyricsWord" />
             </d:Style.DataContext>
-            <Setter Property="FontFamily" Value="Calibri" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="LightGray" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -83,95 +109,105 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="Lyrics" TargetType="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="Focusable" Value="False" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEditMode}" Value="true">
+                    <Setter Property="Visibility" Value="Hidden" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="ItemsControl">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
+        </Style>
+        <Style TargetType="StackPanel">
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+        <Style TargetType="Slider">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsMoveToPointEnabled" Value="True" />
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="48"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="63"/>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="63" />
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal">
-            <Button Margin="4" Click="NewLyricsClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="New lyrics (F2)" Focusable="False">
+            <Button Click="NewLyricsClick" ToolTip="New lyrics (F2)">
                 <Image Source="..\Images\new-file.png" />
             </Button>
-            <Button Margin="4" Click="OpenAudioClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Open audio file (F3)" Focusable="False">
+            <Button Click="OpenAudioClick" ToolTip="Open audio file (F3)">
                 <Image Source="..\Images\audio-file.png" />
             </Button>
-            <Button Margin="4" Click="OpenLyricsClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Open lyrics file (F4)" Focusable="False">
+            <Button Click="OpenLyricsClick" ToolTip="Open lyrics file (F4)">
                 <Image Source="..\Images\open.png" />
             </Button>
-            <Button Margin="4" Click="SaveLyricsClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Save lyrics (Ctrl+S)" Focusable="False">
+            <Button Click="SaveLyricsClick" ToolTip="Save lyrics (Ctrl+S)">
                 <Image Source="..\Images\save.png" />
             </Button>
-            <Button Margin="4" Click="SaveLyricsAsClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Save lyrics as (Ctrl+Shift+S)" Focusable="False">
+            <Button Click="SaveLyricsAsClick" ToolTip="Save lyrics as (Ctrl+Shift+S)">
                 <Image Source="..\Images\save-as.png" />
             </Button>
-            <Button Margin="4" Click="UndoClick" IsEnabled="{Binding IsUndoEnabled}" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Undo (Ctrl+Z)" Focusable="False">
+            <Button IsEnabled="{Binding IsUndoEnabled}" Click="UndoClick" ToolTip="Undo (Ctrl+Z)">
                 <Image Source="..\Images\undo.png" />
             </Button>
-            <Button Margin="4" Click="RedoClick" IsEnabled="{Binding IsRedoEnabled}" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Redo (Ctrl+Y, Ctrl+Shift+Z)" Focusable="False">
+            <Button IsEnabled="{Binding IsRedoEnabled}" Click="RedoClick" ToolTip="Redo (Ctrl+Y, Ctrl+Shift+Z)">
                 <Image Source="..\Images\redo.png" />
             </Button>
-            <Button Margin="4" Click="EditClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Edit mode on/off (F12)" Focusable="False">
+            <Button Click="EditClick" ToolTip="Edit mode on/off (F12)">
                 <Image Source="..\Images\edit.png" />
             </Button>
-            <Button Margin="4" Click="HelpClick" Background="Transparent" BorderBrush="#FFCCCCCC" Padding="4" ToolTip="Help (F1)" Focusable="False">
+            <Button Click="HelpClick" ToolTip="Help (F1)">
                 <Image Source="..\Images\info.png" />
             </Button>
         </StackPanel>
         <GroupBox Header="{Binding LyricsFilePath, FallbackValue=Open or paste lyrics}" Grid.Row="1">
             <Grid>
-                <TextBox Text="{Binding LyricsText, UpdateSourceTrigger=PropertyChanged}" helper:TextBoxHelper.CaretIndex="{Binding CaretIndex}" VerticalScrollBarVisibility="Auto" FontFamily="Calibri" FontSize="18">
-                    <TextBox.Style>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Setter Property="FocusManager.FocusedElement" Value="{Binding RelativeSource={RelativeSource Self}}" />
-                                    <Setter Property="FocusManager.IsFocusScope" Value="True" />
-                                </DataTrigger>
-                                <Trigger Property="IsFocused" Value="True">
-                                    <Setter Property="FocusManager.FocusedElement" Value="{Binding RelativeSource={RelativeSource Self}}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                </TextBox>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Focusable="False" helper:ScrollViewerHelper.VerticalOffset="{Binding ScrollViewerPosition, Mode=TwoWay}" SizeChanged="ScrollViewer_OnSizeChanged">
-                    <ScrollViewer.Style>
-                        <Style TargetType="ScrollViewer">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsEditMode}" Value="true">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ScrollViewer.Style>
-                    <ItemsControl DataContext="{Binding Lyrics}" ItemsSource="{Binding LyricsLines}" Focusable="False" KeyboardNavigation.TabNavigation="None">
+                <TextBox Text="{Binding LyricsText, UpdateSourceTrigger=PropertyChanged}"
+                         helper:TextBoxHelper.CaretIndex="{Binding CaretIndex}"
+                         helper:ScrollViewerHelper.VerticalOffset="{Binding ScrollViewerPosition, Mode=TwoWay}" />
+                <ScrollViewer helper:ScrollViewerHelper.VerticalOffset="{Binding ScrollViewerPosition, Mode=TwoWay}"
+                              SizeChanged="ScrollViewer_OnSizeChanged"
+                              Style="{StaticResource Lyrics}">
+                    <ItemsControl DataContext="{Binding Lyrics}" ItemsSource="{Binding LyricsLines}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Orientation="Vertical" Focusable="False"/>
+                                <StackPanel Orientation="Vertical" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <DockPanel>
-                                    <TextBlock DockPanel.Dock="Left" Text="{Binding StartTimeText}" Style="{StaticResource LineTime}"/>
+                                    <TextBlock Text="{Binding StartTimeText}" Style="{StaticResource LineTime}"
+                                               DockPanel.Dock="Left" />
                                     <ItemsControl ItemsSource="{Binding Words}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal"/>
+                                                <StackPanel Orientation="Horizontal" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <StackPanel Orientation="Horizontal" SizeChanged="StackPanel_OnSizeChanged">
-                                                    <TextBlock Text="{Binding StartTimeText}" Style="{StaticResource WordStartTime}" MouseLeftButtonDown="Word_OnMouseLeftButtonDown"/>
-                                                    <Border Style="{StaticResource WordBorder}" MouseLeftButtonDown="Word_OnMouseLeftButtonDown">
-                                                        <TextBlock Text="{Binding Word}" Style="{StaticResource Word}"/>
+                                                <StackPanel Orientation="Horizontal"
+                                                            SizeChanged="StackPanel_OnSizeChanged">
+                                                    <TextBlock Text="{Binding StartTimeText}"
+                                                               Style="{StaticResource WordStartTime}"
+                                                               MouseLeftButtonDown="Word_OnMouseLeftButtonDown" />
+                                                    <Border Style="{StaticResource WordBorder}"
+                                                            MouseLeftButtonDown="Word_OnMouseLeftButtonDown">
+                                                        <TextBlock Text="{Binding Word}" Style="{StaticResource Word}" />
                                                     </Border>
-                                                    <TextBlock Text="{Binding EndTimeText}" Style="{StaticResource WordEndTime}" MouseLeftButtonDown="Word_OnMouseLeftButtonDown"/>
+                                                    <TextBlock Text="{Binding EndTimeText}"
+                                                               Style="{StaticResource WordEndTime}"
+                                                               MouseLeftButtonDown="Word_OnMouseLeftButtonDown" />
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -183,27 +219,39 @@
                 </ScrollViewer>
             </Grid>
         </GroupBox>
-        <GroupBox Header="{Binding AudioFilePath, FallbackValue=Open audio file}" Grid.Row="2" IsEnabled="{Binding IsAudioFileLoaded}" Focusable="False">
+        <GroupBox Header="{Binding AudioFilePath, FallbackValue=Open audio file}"
+                  IsEnabled="{Binding IsAudioFileLoaded}" Grid.Row="2">
             <DockPanel>
-                <Button DockPanel.Dock="Left" Margin="4" Click="RewindClick" Background="Transparent" BorderThickness="0" Padding="4" ToolTip="Rewind (Ctrl+Left)" Focusable="False">
+                <Button DockPanel.Dock="Left" Click="RewindClick" BorderThickness="0" ToolTip="Rewind (Ctrl+Left)">
                     <Image Source="..\Images\rewind.png" />
                 </Button>
-                <Button DockPanel.Dock="Left" Margin="4" Click="PlayPauseClick" Background="Transparent" BorderThickness="0" Padding="4" ToolTip="{Binding PlayPauseText}" Focusable="False">
-                    <Image Source="{Binding PlayPauseIconPath}"/>
+                <Button ToolTip="{Binding PlayPauseText}" DockPanel.Dock="Left" Click="PlayPauseClick"
+                        BorderThickness="0">
+                    <Image Source="{Binding PlayPauseIconPath}" />
                 </Button>
-                <Button DockPanel.Dock="Left" Margin="4" Click="StopClick" Background="Transparent" BorderThickness="0" Padding="4" ToolTip="Stop" Focusable="False">
+                <Button DockPanel.Dock="Left" Click="StopClick" BorderThickness="0" ToolTip="Stop">
                     <Image Source="..\Images\stop.png" />
                 </Button>
-                <Button DockPanel.Dock="Left" Margin="4" Click="ForwardClick" Background="Transparent" BorderThickness="0" Padding="4" ToolTip="Fast forward (Ctrl+Right)" Focusable="False">
+                <Button DockPanel.Dock="Left" Click="ForwardClick" BorderThickness="0"
+                        ToolTip="Fast forward (Ctrl+Right)">
                     <Image Source="..\Images\forward.png" />
                 </Button>
-                <TextBlock DockPanel.Dock="Left" Text="{Binding PlayTempoText,FallbackValue=Tempo: 1.0x}" VerticalAlignment="Center" Margin="4"/>
-                <Slider DockPanel.Dock="Left" Orientation="Vertical" Width="20" Maximum="2" Value="{Binding PlayTempo, FallbackValue=1}" Minimum="0.1" LargeChange="0.1" IsMoveToPointEnabled="True" ToolTip="Change tempo (Ctrl+Up, Ctrl+Down)" Focusable="False"/>
-                <TextBlock DockPanel.Dock="Left" Width="80" Text="{Binding PlayVolumeText,FallbackValue=Volume: 100%}" VerticalAlignment="Center"/>
-                <Slider DockPanel.Dock="Left" Orientation="Vertical" Width="20" Maximum="1" Value="{Binding PlayVolume, FallbackValue=1}" Minimum="0" LargeChange="0.1" IsMoveToPointEnabled="True" ToolTip="Change volume (Shift+Up, Shift+Down)" Focusable="False"/>
-                <TextBlock DockPanel.Dock="Left" Text="{Binding CurrentTimeText,FallbackValue=0:00.00}" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding TotalTimeText,FallbackValue=2:46}" VerticalAlignment="Center"/>
-                <Slider HorizontalAlignment="Stretch" Width="Auto" Margin="8" Value="{Binding PlaySliderPosition}" Maximum="{Binding PlaySliderMaximum}" SmallChange="1" IsMoveToPointEnabled="True" Focusable="False"/>
+                <TextBlock Text="{Binding PlayTempoText,FallbackValue=Tempo: 1.0x}" DockPanel.Dock="Left"
+                           VerticalAlignment="Center" Margin="4" />
+                <Slider Value="{Binding PlayTempo, FallbackValue=1}" DockPanel.Dock="Left" Orientation="Vertical"
+                        Width="20" Maximum="2" Minimum="0.1" LargeChange="0.1"
+                        ToolTip="Change tempo (Ctrl+Up, Ctrl+Down)" />
+                <TextBlock Text="{Binding PlayVolumeText,FallbackValue=Volume: 100%}" DockPanel.Dock="Left" Width="80"
+                           VerticalAlignment="Center" />
+                <Slider Value="{Binding PlayVolume, FallbackValue=1}" DockPanel.Dock="Left" Orientation="Vertical"
+                        Width="20" Maximum="1" Minimum="0" LargeChange="0.1"
+                        ToolTip="Change volume (Shift+Up, Shift+Down)" />
+                <TextBlock Text="{Binding CurrentTimeText,FallbackValue=0:00.00}" DockPanel.Dock="Left"
+                           VerticalAlignment="Center" Margin="10,0,0,0" />
+                <TextBlock Text="{Binding TotalTimeText,FallbackValue=2:46}" DockPanel.Dock="Right"
+                           VerticalAlignment="Center" />
+                <Slider Value="{Binding PlaySliderPosition}" Maximum="{Binding PlaySliderMaximum}"
+                        HorizontalAlignment="Stretch" Width="Auto" Margin="8" SmallChange="1" />
             </DockPanel>
         </GroupBox>
     </Grid>

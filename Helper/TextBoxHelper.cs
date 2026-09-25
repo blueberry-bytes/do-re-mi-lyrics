@@ -7,8 +7,10 @@ internal class TextBoxHelper : DependencyObject
 {
     private const int CaretIndexPropertyDefault = -485609317;
 
-    public static readonly DependencyProperty CaretIndexProperty = DependencyProperty.RegisterAttached("CaretIndex", typeof(int), typeof(TextBoxHelper),
-        new FrameworkPropertyMetadata(CaretIndexPropertyDefault, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, CaretIndexChanged));
+    public static readonly DependencyProperty CaretIndexProperty = DependencyProperty.RegisterAttached("CaretIndex",
+        typeof(int), typeof(TextBoxHelper),
+        new FrameworkPropertyMetadata(CaretIndexPropertyDefault, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            CaretIndexChanged));
 
     public static void SetCaretIndex(DependencyObject dependencyObject, int i)
     {
@@ -20,9 +22,11 @@ internal class TextBoxHelper : DependencyObject
         return (int) dependencyObject.GetValue(CaretIndexProperty);
     }
 
-    private static void CaretIndexChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs eventArgs)
+    private static void CaretIndexChanged(DependencyObject dependencyObject,
+        DependencyPropertyChangedEventArgs eventArgs)
     {
-        if (dependencyObject is not TextBox textBox || eventArgs.OldValue is not int oldValue || eventArgs.NewValue is not int newValue)
+        if (dependencyObject is not TextBox textBox || eventArgs.OldValue is not int oldValue ||
+            eventArgs.NewValue is not int newValue)
         {
             return;
         }

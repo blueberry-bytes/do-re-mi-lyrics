@@ -1,91 +1,91 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Label="Globals">
-    <SccProjectName>SAK</SccProjectName>
-    <SccProvider>SAK</SccProvider>
-    <SccAuxPath>SAK</SccAuxPath>
-    <SccLocalPath>SAK</SccLocalPath>
-  </PropertyGroup>
+    <PropertyGroup Label="Globals">
+        <SccProjectName>SAK</SccProjectName>
+        <SccProvider>SAK</SccProvider>
+        <SccAuxPath>SAK</SccAuxPath>
+        <SccLocalPath>SAK</SccLocalPath>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows7.0</TargetFramework>
-    <RootNamespace>Do_Re_Mi_Lyrics</RootNamespace>
-    <Nullable>enable</Nullable>
-    <UseWPF>true</UseWPF>
-    <ApplicationIcon>Images\DO-RE-Mi-icon.ico</ApplicationIcon>
-    <AssemblyVersion></AssemblyVersion>
-    <FileVersion></FileVersion>
-    <PackageLicenseFile>D:\Źródła własne\GitHub\do-re-mi-lyrics\TextResources\license.html</PackageLicenseFile>
-    <Version>1.2.0</Version>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <RootNamespace>Do_Re_Mi_Lyrics</RootNamespace>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+        <ApplicationIcon>Images\DO-RE-Mi-icon.ico</ApplicationIcon>
+        <AssemblyVersion></AssemblyVersion>
+        <FileVersion></FileVersion>
+        <PackageLicenseFile>D:\Źródła własne\GitHub\do-re-mi-lyrics\TextResources\license.html</PackageLicenseFile>
+        <Version>1.2.1</Version>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Do-Re-Mi Lyrics.csproj.vspscc" />
-    <None Remove="Images\audio-file.png" />
-    <None Remove="Images\DO-RE-Mi-icon.png" />
-    <None Remove="Images\edit.png" />
-    <None Remove="Images\forward.png" />
-    <None Remove="Images\info.png" />
-    <None Remove="Images\new-file.png" />
-    <None Remove="Images\open.png" />
-    <None Remove="Images\pause.png" />
-    <None Remove="Images\play.png" />
-    <None Remove="Images\redo.png" />
-    <None Remove="Images\rewind.png" />
-    <None Remove="Images\save-as.png" />
-    <None Remove="Images\save.png" />
-    <None Remove="Images\stop.png" />
-    <None Remove="Images\undo.png" />
-    <None Remove="TextResources\changelog.txt" />
-    <None Remove="TextResources\help.txt" />
-    <None Remove="TextResources\license.txt" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="Do-Re-Mi Lyrics.csproj.vspscc"/>
+        <None Remove="Images\audio-file.png"/>
+        <None Remove="Images\DO-RE-Mi-icon.png"/>
+        <None Remove="Images\edit.png"/>
+        <None Remove="Images\forward.png"/>
+        <None Remove="Images\info.png"/>
+        <None Remove="Images\new-file.png"/>
+        <None Remove="Images\open.png"/>
+        <None Remove="Images\pause.png"/>
+        <None Remove="Images\play.png"/>
+        <None Remove="Images\redo.png"/>
+        <None Remove="Images\rewind.png"/>
+        <None Remove="Images\save-as.png"/>
+        <None Remove="Images\save.png"/>
+        <None Remove="Images\stop.png"/>
+        <None Remove="Images\undo.png"/>
+        <None Remove="TextResources\changelog.txt"/>
+        <None Remove="TextResources\help.txt"/>
+        <None Remove="TextResources\license.txt"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Images\Do-Re-Mi-icon.ico" />
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Include="Images\Do-Re-Mi-icon.ico"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="NAudio" Version="1.9.0" />
-    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
-    <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="NAudio" Version="1.9.0"/>
+        <PackageReference Include="SoundTouch.Net" Version="2.3.2"/>
+        <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Images\audio-file.png" />
-    <Resource Include="Images\Do-Re-Mi-icon.png" />
-    <Resource Include="Images\edit.png" />
-    <Resource Include="Images\forward.png" />
-    <Resource Include="Images\info.png" />
-    <Resource Include="Images\new-file.png" />
-    <Resource Include="Images\open.png" />
-    <Resource Include="Images\pause.png" />
-    <Resource Include="Images\play.png" />
-    <Resource Include="Images\redo.png" />
-    <Resource Include="Images\rewind.png" />
-    <Resource Include="Images\save-as.png" />
-    <Resource Include="Images\save.png" />
-    <Resource Include="Images\stop.png" />
-    <Resource Include="Images\undo.png" />
-    <EmbeddedResource Include="TextResources\changelog.txt" />
-    <EmbeddedResource Include="TextResources\help.txt" />
-    <EmbeddedResource Include="TextResources\license.txt" />
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Include="Images\audio-file.png"/>
+        <Resource Include="Images\Do-Re-Mi-icon.png"/>
+        <Resource Include="Images\edit.png"/>
+        <Resource Include="Images\forward.png"/>
+        <Resource Include="Images\info.png"/>
+        <Resource Include="Images\new-file.png"/>
+        <Resource Include="Images\open.png"/>
+        <Resource Include="Images\pause.png"/>
+        <Resource Include="Images\play.png"/>
+        <Resource Include="Images\redo.png"/>
+        <Resource Include="Images\rewind.png"/>
+        <Resource Include="Images\save-as.png"/>
+        <Resource Include="Images\save.png"/>
+        <Resource Include="Images\stop.png"/>
+        <Resource Include="Images\undo.png"/>
+        <EmbeddedResource Include="TextResources\changelog.txt"/>
+        <EmbeddedResource Include="TextResources\help.txt"/>
+        <EmbeddedResource Include="TextResources\license.txt"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Properties\Settings.Designer.cs">
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Update="Properties\Settings.Designer.cs">
+            <DesignTimeSharedInput>True</DesignTimeSharedInput>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Settings.settings</DependentUpon>
+        </Compile>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="Properties\Settings.settings">
+            <Generator>SettingsSingleFileGenerator</Generator>
+            <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+        </None>
+    </ItemGroup>
 
 </Project>

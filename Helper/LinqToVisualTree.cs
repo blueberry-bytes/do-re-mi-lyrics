@@ -4,21 +4,14 @@ using System.Windows.Media;
 
 namespace Do_Re_Mi_Lyrics.Helper;
 
-public class VisualTreeAdapter : ILinqTree<DependencyObject>
+public class VisualTreeAdapter(DependencyObject item) : ILinqTree<DependencyObject>
 {
-    private readonly DependencyObject _item;
-
-    public VisualTreeAdapter(DependencyObject item)
-    {
-        _item = item;
-    }
-
     public IEnumerable<DependencyObject> Children()
     {
-        int childrenCount = VisualTreeHelper.GetChildrenCount(_item);
+        int childrenCount = VisualTreeHelper.GetChildrenCount(item);
         for (int i = 0; i < childrenCount; i++)
         {
-            yield return VisualTreeHelper.GetChild(_item, i);
+            yield return VisualTreeHelper.GetChild(item, i);
         }
     }
 }

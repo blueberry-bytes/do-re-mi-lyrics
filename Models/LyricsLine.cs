@@ -6,21 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace Do_Re_Mi_Lyrics.Models;
 
-public class LyricsLine : INotifyPropertyChanged
+public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
 {
-    private readonly Lyrics _lyrics;
-    private bool _isNotProperTime;
-    private bool _isTooShortTime;
-    private ObservableCollection<LyricsWord> _words = new();
-
-    public LyricsLine(Lyrics lyrics)
-    {
-        _lyrics = lyrics;
-    }
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public TimeSpan StartTime => FirstWord?.StartTime ?? TimeSpan.Zero;
+    public TimeSpan StartTime => FirstWord?.StartTime ?? PreviousLine?.LastWord?.EndTime ?? TimeSpan.Zero;
 
     public string StartTimeText => StartTime.ToString(@"\[mm\:ss\.ff\]");
 
@@ -28,44 +18,46 @@ public class LyricsLine : INotifyPropertyChanged
 
     public bool IsNotProperTime
     {
-        get => _isNotProperTime;
+        get;
         set
         {
-            _isNotProperTime = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool IsTooShortTime
     {
-        get => _isTooShortTime;
+        get;
         set
         {
-            _isTooShortTime = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public ObservableCollection<LyricsWord> Words
     {
-        get => _words;
+        get;
         set
         {
-            _words = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = [];
 
     internal LyricsWord? FirstWord => Words.Count > 0 ? Words[0] : null;
     internal LyricsWord? LastWord => Words.Count > 0 ? Words[^1] : null;
 
-    internal LyricsLine? NextLine => _lyrics.LastLine == this || _lyrics.LastLine == null || _lyrics.LyricsLines.IndexOf(this) == -1
-        ? null
-        : _lyrics.LyricsLines[_lyrics.LyricsLines.IndexOf(this) + 1];
+    internal LyricsLine? NextLine =>
+        lyrics.LastLine == this || lyrics.LastLine == null || lyrics.LyricsLines.IndexOf(this) == -1
+            ? null
+            : lyrics.LyricsLines[lyrics.LyricsLines.IndexOf(this) + 1];
 
-    internal LyricsLine? PreviousLine => _lyrics.FirstLine == this || _lyrics.FirstLine == null || _lyrics.LyricsLines.IndexOf(this) == -1
-        ? null
-        : _lyrics.LyricsLines[_lyrics.LyricsLines.IndexOf(this) - 1];
+    internal LyricsLine? PreviousLine =>
+        lyrics.FirstLine == this || lyrics.FirstLine == null || lyrics.LyricsLines.IndexOf(this) == -1
+            ? null
+            : lyrics.LyricsLines[lyrics.LyricsLines.IndexOf(this) - 1];
 
     public string ToString(out int caretIndex)
     {
@@ -87,7 +79,9 @@ public class LyricsLine : INotifyPropertyChanged
     internal void CheckProperTime()
     {
         IsNotProperTime = StartTime - PreviousLine?.LastWord?.EndTime < TimeSpan.Zero;
-        IsTooShortTime = !string.IsNullOrWhiteSpace(FirstWord?.Word) && StartTime - PreviousLine?.StartTime < TimeSpan.FromSeconds(1.5) && _lyrics.FirstLine?.NextLine != this;
+        IsTooShortTime = !string.IsNullOrWhiteSpace(FirstWord?.Word) &&
+                         StartTime - PreviousLine?.StartTime < TimeSpan.FromSeconds(1.5) &&
+                         lyrics.FirstLine?.NextLine != this;
     }
 
     internal void AddWord(LyricsWord word)
@@ -113,13 +107,9 @@ public class LyricsLine : INotifyPropertyChanged
         OnPropertyChanged(nameof(StartTimeText));
     }
 
-    internal LyricsLine Clone(Lyrics lyrics)
+    internal LyricsLine Clone(Lyrics lyricsToClone)
     {
-        LyricsLine lyricsLine = new(lyrics)
-        {
-            IsNotProperTime = IsNotProperTime,
-            IsTooShortTime = IsTooShortTime
-        };
+        LyricsLine lyricsLine = new(lyricsToClone) {IsNotProperTime = IsNotProperTime, IsTooShortTime = IsTooShortTime};
         foreach (LyricsWord lyricsWord in Words)
         {
             LyricsWord newLyricsWord = lyricsWord.Clone(lyricsLine);

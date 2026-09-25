@@ -8,17 +8,21 @@ namespace Do_Re_Mi_Lyrics.Helper;
 public static class ScrollViewerHelper
 {
     public static readonly DependencyProperty VerticalOffsetProperty =
-        DependencyProperty.RegisterAttached("VerticalOffset", typeof(double), typeof(ScrollViewerHelper), new PropertyMetadata(0.0, OnVerticalOffsetPropertyChanged));
+        DependencyProperty.RegisterAttached("VerticalOffset", typeof(double), typeof(ScrollViewerHelper),
+            new PropertyMetadata(0.0, OnVerticalOffsetPropertyChanged));
 
-    public static readonly DependencyProperty HorizontalOffsetProperty = DependencyProperty.RegisterAttached("HorizontalOffset", typeof(double), typeof(ScrollViewerHelper),
-        new PropertyMetadata(0.0, OnHorizontalOffsetPropertyChanged));
+    public static readonly DependencyProperty HorizontalOffsetProperty =
+        DependencyProperty.RegisterAttached("HorizontalOffset", typeof(double), typeof(ScrollViewerHelper),
+            new PropertyMetadata(0.0, OnHorizontalOffsetPropertyChanged));
 
 
     private static readonly DependencyProperty HorizontalScrollBarProperty =
-        DependencyProperty.RegisterAttached("HorizontalScrollBar", typeof(ScrollBar), typeof(ScrollViewerHelper), new PropertyMetadata(null));
+        DependencyProperty.RegisterAttached("HorizontalScrollBar", typeof(ScrollBar), typeof(ScrollViewerHelper),
+            new PropertyMetadata(null));
 
     private static readonly DependencyProperty VerticalScrollBarProperty =
-        DependencyProperty.RegisterAttached("VerticalScrollBar", typeof(ScrollBar), typeof(ScrollViewerHelper), new PropertyMetadata(null));
+        DependencyProperty.RegisterAttached("VerticalScrollBar", typeof(ScrollBar), typeof(ScrollViewerHelper),
+            new PropertyMetadata(null));
 
     public static double GetVerticalOffset(DependencyObject depObj)
     {

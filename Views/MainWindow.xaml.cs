@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Do_Re_Mi_Lyrics.Models;
 using Do_Re_Mi_Lyrics.ViewModels;
-using Application = Do_Re_Mi_Lyrics.Models.Application;
 
 namespace Do_Re_Mi_Lyrics.Views;
 
@@ -44,17 +43,17 @@ public partial class MainWindow
 
     private void RewindClick(object sender, RoutedEventArgs e)
     {
-        Application.Audio.Rewind();
+        Global.Audio.Rewind();
     }
 
     private void StopClick(object sender, RoutedEventArgs e)
     {
-        Application.Audio.Stop();
+        Global.Audio.Stop();
     }
 
     private void ForwardClick(object sender, RoutedEventArgs e)
     {
-        Application.Audio.FastForward();
+        Global.Audio.FastForward();
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -75,13 +74,13 @@ public partial class MainWindow
                 _viewModel.OpenLyricsFile();
                 break;
             case Key.F5 when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SetEndingTimeToPreviousLine();
+                Global.Lyrics.SetEndingTimeToPreviousLine();
                 break;
             case Key.F6 when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SetTimeToCurrentWord();
+                Global.Lyrics.SetTimeToCurrentWord();
                 break;
             case Key.F8 when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.RemoveStartTime();
+                Global.Lyrics.RemoveStartTime();
                 break;
             case Key.F12 when Keyboard.Modifiers == ModifierKeys.None:
                 _viewModel.ChangeEditMode();
@@ -103,58 +102,60 @@ public partial class MainWindow
                 _viewModel.Undo();
                 break;
             case Key.Left when (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control:
-                Application.Audio.Rewind();
+                Global.Audio.Rewind();
                 break;
             case Key.Right when (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control:
-                Application.Audio.FastForward();
+                Global.Audio.FastForward();
                 break;
             case Key.Left when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SelectPreviousWord();
+                Global.Lyrics.SelectPreviousWord();
                 break;
             case Key.Right when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SelectNextWord();
+                Global.Lyrics.SelectNextWord();
                 break;
             case Key.Up when Keyboard.Modifiers == ModifierKeys.Control:
-                Application.Audio.SetTempoUp();
+                Global.Audio.SetTempoUp();
                 break;
             case Key.Down when Keyboard.Modifiers == ModifierKeys.Control:
-                Application.Audio.SetTempoDown();
+                Global.Audio.SetTempoDown();
                 break;
             case Key.Up when Keyboard.Modifiers == ModifierKeys.Shift:
-                Application.Audio.SetVolumeUp();
+                Global.Audio.SetVolumeUp();
                 break;
             case Key.Down when Keyboard.Modifiers == ModifierKeys.Shift:
-                Application.Audio.SetVolumeDown();
+                Global.Audio.SetVolumeDown();
                 break;
             case Key.Up when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SelectPreviousLine();
+                Global.Lyrics.SelectPreviousLine();
                 break;
             case Key.Down when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.SelectNextLine();
+                Global.Lyrics.SelectNextLine();
                 break;
+            case Key.OemMinus when Keyboard.Modifiers == ModifierKeys.Control:
             case Key.Subtract when Keyboard.Modifiers == ModifierKeys.Control:
-                Application.Lyrics.ChangeStartingTimeOfAllWordsFromCurrent(-0.2);
+                Global.Lyrics.ChangeStartingTimeOfAllWordsFromCurrent(-0.2);
                 break;
+            case Key.OemPlus when Keyboard.Modifiers == ModifierKeys.Control:
             case Key.Add when Keyboard.Modifiers == ModifierKeys.Control:
-                Application.Lyrics.ChangeStartingTimeOfAllWordsFromCurrent(0.2);
+                Global.Lyrics.ChangeStartingTimeOfAllWordsFromCurrent(0.2);
                 break;
             case Key.Subtract when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.ChangeStartTimeOfCurrentWord(-0.2);
+                Global.Lyrics.ChangeStartTimeOfCurrentWord(-0.2);
                 break;
             case Key.Add when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.ChangeStartTimeOfCurrentWord(0.2);
+                Global.Lyrics.ChangeStartTimeOfCurrentWord(0.2);
                 break;
             case Key.Enter when Keyboard.Modifiers == ModifierKeys.Control:
                 _viewModel.MovePlaySliderToWord();
                 break;
             case Key.Enter when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.MoveWordsToNewLine();
+                Global.Lyrics.MoveWordsToNewLine();
                 break;
             case Key.Back when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.MoveLineToPrevious();
+                Global.Lyrics.MoveLineToPrevious();
                 break;
             case Key.Delete when Keyboard.Modifiers == ModifierKeys.None:
-                Application.Lyrics.MoveNextLineToCurrent();
+                Global.Lyrics.MoveNextLineToCurrent();
                 break;
             case Key.Space when Keyboard.Modifiers == ModifierKeys.None:
                 _viewModel.PlayOrPause();
@@ -169,7 +170,7 @@ public partial class MainWindow
             e.Cancel = true;
         }
 
-        Application.Audio.Dispose();
+        Global.Audio.Dispose();
 
         if (!File.Exists($"{Path.GetTempPath()}temp.wav"))
         {
@@ -203,7 +204,7 @@ public partial class MainWindow
                     return;
             }
 
-            Application.Lyrics.SelectWord(word);
+            Global.Lyrics.SelectWord(word);
             if (e.ClickCount == 2)
             {
                 _viewModel.MovePlaySliderToWord();

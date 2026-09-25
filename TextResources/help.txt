@@ -4,9 +4,9 @@
 </head>
 <body style="font-family: Calibri">
 	<p><b>How to begin?</b></p>
-	<p>Open audio file. Open lyrics file or paste lyrics text from the clipboard. Start audio (Space) and use F5 to set time at the start of every word. Red time means that it's earlier then the previous one and it should be corrected.</p>
-	<p><b>How to split word into parts?</b></p>
-	<p>Sometimes one syllable in a word is being sung several times longer than the rest. Then the word can be split into two or more parts. Enter edit mode (F12), write vertical bar character | in place where you want to split and leave the edit mode (F12). Now you can set the time for every part of the word separately.</p>
+	<p>Open audio file. Open the lyrics' file or paste lyrics' text from the clipboard. Start audio (Space) and use F6 to set time at the start of every word. Red time means that it's earlier than the previous one and it should be corrected.</p>
+	<p><b>How to split a word into parts?</b></p>
+	<p>Sometimes one syllable in a word is being sung several times longer than the rest. Then the word can be split into two or more parts. Enter edit mode (F12), write vertical bar character | in the place where you want to split and leave the edit mode (F12). Now you can set the time for every part of the word separately.</p>
 	<p><b>Mouse shortcuts</b></p>
 	<p>
 		<b>Left Mouse Button</b> - Highlight word<br />

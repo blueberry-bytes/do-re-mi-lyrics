@@ -5,24 +5,31 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:Do_Re_Mi_Lyrics.ViewModels"
         mc:Ignorable="d" d:DataContext="{d:DesignInstance viewModels:AboutWindowViewModel}"
-        Title="About..." Height="600" Width="800" MinWidth="600" MinHeight="600" WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" ShowInTaskbar="False" Background="#FFEAEAEA">
+        Title="About..." Height="600" Width="800" MinWidth="600" MinHeight="600" WindowStyle="ToolWindow"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False" Background="#FFEAEAEA">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="5*"/>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="5*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="160"/>
-            <RowDefinition/>
-            <RowDefinition Height="60"/>
+            <RowDefinition Height="160" />
+            <RowDefinition />
+            <RowDefinition Height="60" />
         </Grid.RowDefinitions>
-        <Image Grid.Column="1" HorizontalAlignment="Left" Height="100" VerticalAlignment="Center" Width="100" Source="/Images/DO-RE-Mi-icon.png"/>
+        <Image Grid.Column="1" HorizontalAlignment="Left" Height="100" VerticalAlignment="Center" Width="100"
+               Source="/Images/DO-RE-Mi-icon.png" />
         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-            <TextBlock Text="{Binding NameVersion, FallbackValue=Do-Re-Mi Lyrics v1.0.0}" HorizontalAlignment="Center" FontFamily="Calibri" FontWeight="Bold" FontSize="32"/>
-            <TextBlock Text="Enhanced Lyrics Maker" HorizontalAlignment="Center" FontFamily="Calibri" FontSize="14"/>
-            <TextBlock Text="© 2022 Łukasz 'Woo-Cash' Przestrzelski" HorizontalAlignment="Center" FontFamily="Calibri" FontSize="14"/>
-            <TextBlock Text="https://github.com/Woo-Cash/do-re-mi-lyrics" HorizontalAlignment="Center" FontFamily="Calibri" FontSize="14" Cursor="Hand" Foreground="#FF001BFF" MouseDown="Url_MouseDown" />
-            <TextBlock Text="lukasz.przestrzelski@gmail.com" HorizontalAlignment="Center" FontFamily="Calibri" FontSize="14" Cursor="Hand" Foreground="#FF001BFF" MouseDown="TextBlock_MouseDown" />
+            <TextBlock Text="{Binding NameVersion, FallbackValue=Do-Re-Mi Lyrics v1.0.0}" HorizontalAlignment="Center"
+                       FontFamily="Calibri" FontWeight="Bold" FontSize="32" />
+            <TextBlock Text="Enhanced Lyrics Maker" HorizontalAlignment="Center" FontFamily="Calibri" FontSize="14" />
+            <TextBlock Text="© 2022 Łukasz 'Woo-Cash' Przestrzelski" HorizontalAlignment="Center" FontFamily="Calibri"
+                       FontSize="14" />
+            <TextBlock Text="https://github.com/blueberry-bytes/do-re-mi-lyrics" HorizontalAlignment="Center"
+                       FontFamily="Calibri" FontSize="14" Cursor="Hand" Foreground="#FF001BFF"
+                       MouseDown="Url_MouseDown" />
+            <TextBlock Text="lukasz.przestrzelski@gmail.com" HorizontalAlignment="Center" FontFamily="Calibri"
+                       FontSize="14" Cursor="Hand" Foreground="#FF001BFF" MouseDown="TextBlock_MouseDown" />
         </StackPanel>
         <!--<Border Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0" Margin="20, 5" BorderThickness="3" BorderBrush="Gray" >
             <Border.Effect>
@@ -30,20 +37,22 @@
                 </DropShadowEffect>
             </Border.Effect>
         </Border>-->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0" Margin="20, 5" Background="White" BorderThickness="0" ClipToBounds="True">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="0" Margin="20, 5" Background="White" BorderThickness="0"
+                ClipToBounds="True">
             <Border Background="Transparent" BorderBrush="Black" BorderThickness="1" Margin="-1">
                 <Border.Effect>
-                    <DropShadowEffect ShadowDepth="0" BlurRadius="5"/>
+                    <DropShadowEffect ShadowDepth="0" BlurRadius="5" />
                 </Border.Effect>
-             <WebBrowser x:Name="WebBrowser" Margin="5"/>
-           </Border>
+                <WebBrowser x:Name="WebBrowser" Margin="5" />
+            </Border>
         </Border>
-        <StackPanel HorizontalAlignment="Left" Margin="20,0,0,20" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Orientation="Horizontal">
-            <Button Content="License" Margin="0,0,20,0" FontSize="14" Padding="10, 5" Click="LicenseClick"/>
-            <Button Content="Changelog"  Margin="0,0,20,0" FontSize="14" Padding="10, 5" Click="ChangelogClick"/>
-            <Button Content="Help" FontSize="14" Padding="10, 5" Click="HelpClick"/>
+        <StackPanel HorizontalAlignment="Left" Margin="20,0,0,20" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                    VerticalAlignment="Bottom" Orientation="Horizontal">
+            <Button Content="License" Margin="0,0,20,0" FontSize="14" Padding="10, 5" Click="LicenseClick" />
+            <Button Content="Changelog" Margin="0,0,20,0" FontSize="14" Padding="10, 5" Click="ChangelogClick" />
+            <Button Content="Help" FontSize="14" Padding="10, 5" Click="HelpClick" />
         </StackPanel>
         <Button Content="Close" HorizontalAlignment="Right" Grid.Row="2" Grid.Column="1" Margin="0,0,20,20"
-                VerticalAlignment="Bottom" FontSize="14" Padding="10, 5" Click="CloseClick"/>
+                VerticalAlignment="Bottom" FontSize="14" Padding="10, 5" Click="CloseClick" />
     </Grid>
 </Window>

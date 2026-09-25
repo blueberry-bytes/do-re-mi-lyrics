@@ -15,10 +15,7 @@ public class Audio : IDisposable
     private float _volume;
     private WaveChannel32? _waveChannel;
 
-    private IWavePlayer _waveOut = new WaveOutEvent
-    {
-        DesiredLatency = 100
-    };
+    private WaveOutEvent _waveOut = new() {DesiredLatency = 100};
 
     public string CurrentTimeText => (_waveChannel?.CurrentTime ?? TimeSpan.Zero).ToString(@"mm\:ss\.ff");
 
@@ -26,14 +23,10 @@ public class Audio : IDisposable
 
     internal TimeSpan CurrentTime
     {
-        get => TimeSpan.FromMilliseconds((_waveChannel?.CurrentTime ?? TimeSpan.Zero).TotalMilliseconds - (_waveChannel?.CurrentTime ?? TimeSpan.Zero).TotalMilliseconds % 10);
-        set
-        {
-            if (_waveChannel != null)
-            {
-                _waveChannel.CurrentTime = value;
-            }
-        }
+        get =>
+            TimeSpan.FromMilliseconds((_waveChannel?.CurrentTime ?? TimeSpan.Zero).TotalMilliseconds -
+                                      (_waveChannel?.CurrentTime ?? TimeSpan.Zero).TotalMilliseconds % 10);
+        set => _waveChannel?.CurrentTime = value;
     }
 
     internal double Tempo
@@ -42,10 +35,7 @@ public class Audio : IDisposable
         set
         {
             _tempo = value;
-            if (_processorStream != null)
-            {
-                _processorStream.Tempo = value;
-            }
+            _processorStream?.Tempo = value;
         }
     }
 
@@ -55,10 +45,7 @@ public class Audio : IDisposable
         set
         {
             _volume = value;
-            if (_waveChannel != null)
-            {
-                _waveChannel.Volume = value;
-            }
+            _waveChannel?.Volume = value;
         }
     }
 
@@ -84,7 +71,7 @@ public class Audio : IDisposable
             }
             else
             {
-                _waveChannel.CurrentTime -= new TimeSpan(0, 0, SkipInterval);
+                _waveChannel.CurrentTime -= new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo));
             }
         }
         catch (Exception ex)
@@ -102,14 +89,15 @@ public class Audio : IDisposable
                 return;
             }
 
-            if (_waveChannel.CurrentTime > _waveChannel.TotalTime - new TimeSpan(0, 0, SkipInterval))
+            if (_waveChannel.CurrentTime >
+                _waveChannel.TotalTime - new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo)))
             {
                 _waveChannel.CurrentTime = _waveChannel.TotalTime;
                 Pause();
             }
             else
             {
-                _waveChannel.CurrentTime += new TimeSpan(0, 0, SkipInterval);
+                _waveChannel.CurrentTime += new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo));
             }
         }
         catch (Exception ex)
@@ -128,15 +116,15 @@ public class Audio : IDisposable
             }
 
             _waveOut.Stop();
-            Application.MainWindowViewModel.StopTimer();
+            Global.MainWindowViewModel.StopTimer();
             if (_processorStream.CanSeek)
             {
                 _processorStream.Position = 0;
-                Application.MainWindowViewModel.PlaySliderPosition = 0;
+                Global.MainWindowViewModel.PlaySliderPosition = 0;
             }
 
             _processorStream.Flush();
-            Application.MainWindowViewModel.ChangeButtonToPlay();
+            Global.MainWindowViewModel.ChangeButtonToPlay();
         }
         catch (Exception ex)
         {
@@ -149,14 +137,14 @@ public class Audio : IDisposable
     {
         try
         {
-            if (!Application.MainWindowViewModel.IsAudioFileLoaded || _processorStream == null)
+            if (!Global.MainWindowViewModel.IsAudioFileLoaded || _processorStream == null)
             {
                 return;
             }
 
-            if (Application.MainWindowViewModel.PlayTempo < 2)
+            if (Global.MainWindowViewModel.PlayTempo < 2)
             {
-                Application.MainWindowViewModel.PlayTempo += 0.1;
+                Global.MainWindowViewModel.PlayTempo += 0.1;
             }
         }
         catch (Exception ex)
@@ -169,14 +157,14 @@ public class Audio : IDisposable
     {
         try
         {
-            if (!Application.MainWindowViewModel.IsAudioFileLoaded || _processorStream == null)
+            if (!Global.MainWindowViewModel.IsAudioFileLoaded || _processorStream == null)
             {
                 return;
             }
 
-            if (Application.MainWindowViewModel.PlayTempo > 0.1)
+            if (Global.MainWindowViewModel.PlayTempo > 0.1)
             {
-                Application.MainWindowViewModel.PlayTempo -= 0.1;
+                Global.MainWindowViewModel.PlayTempo -= 0.1;
             }
         }
         catch (Exception ex)
@@ -189,14 +177,14 @@ public class Audio : IDisposable
     {
         try
         {
-            if (!Application.MainWindowViewModel.IsAudioFileLoaded || _waveChannel == null)
+            if (!Global.MainWindowViewModel.IsAudioFileLoaded || _waveChannel == null)
             {
                 return;
             }
 
-            if (Application.MainWindowViewModel.PlayVolume < 1)
+            if (Global.MainWindowViewModel.PlayVolume < 1)
             {
-                Application.MainWindowViewModel.PlayVolume += 0.1f;
+                Global.MainWindowViewModel.PlayVolume += 0.1f;
             }
         }
         catch (Exception ex)
@@ -209,14 +197,14 @@ public class Audio : IDisposable
     {
         try
         {
-            if (!Application.MainWindowViewModel.IsAudioFileLoaded || _waveChannel == null)
+            if (!Global.MainWindowViewModel.IsAudioFileLoaded || _waveChannel == null)
             {
                 return;
             }
 
-            if (Application.MainWindowViewModel.PlayVolume > 0.1)
+            if (Global.MainWindowViewModel.PlayVolume > 0.1)
             {
-                Application.MainWindowViewModel.PlayVolume -= 0.1f;
+                Global.MainWindowViewModel.PlayVolume -= 0.1f;
             }
         }
         catch (Exception ex)
@@ -235,8 +223,8 @@ public class Audio : IDisposable
             }
 
             _waveOut.Play();
-            Application.MainWindowViewModel.StartTimer();
-            Application.MainWindowViewModel.ChangeButtonToPause();
+            Global.MainWindowViewModel.StartTimer();
+            Global.MainWindowViewModel.ChangeButtonToPause();
         }
         catch (Exception ex)
         {
@@ -254,8 +242,8 @@ public class Audio : IDisposable
             }
 
             _waveOut.Pause();
-            Application.MainWindowViewModel.StopTimer();
-            Application.MainWindowViewModel.ChangeButtonToPlay();
+            Global.MainWindowViewModel.StopTimer();
+            Global.MainWindowViewModel.ChangeButtonToPlay();
         }
         catch (Exception ex)
         {
@@ -269,9 +257,9 @@ public class Audio : IDisposable
 
         try
         {
-            if (Path.GetExtension(Application.MainWindowViewModel.AudioFilePath) == ".flac")
+            if (Path.GetExtension(Global.MainWindowViewModel.AudioFilePath) == ".flac")
             {
-                MediaFoundationReader mediaFoundationReader = new(Application.MainWindowViewModel.AudioFilePath);
+                MediaFoundationReader mediaFoundationReader = new(Global.MainWindowViewModel.AudioFilePath);
                 WaveFormat outFormat = new(44100, mediaFoundationReader.WaveFormat.Channels);
 
                 using MediaFoundationResampler resampler = new(mediaFoundationReader, outFormat);
@@ -280,24 +268,14 @@ public class Audio : IDisposable
             }
             else
             {
-                _reader = new AudioFileReader(Application.MainWindowViewModel.AudioFilePath);
+                _reader = new AudioFileReader(Global.MainWindowViewModel.AudioFilePath);
             }
 
-            _waveChannel = new WaveChannel32(_reader)
-            {
-                PadWithZeroes = false,
-                Volume = _volume
-            };
+            _waveChannel = new WaveChannel32(_reader) {PadWithZeroes = false, Volume = _volume};
 
 
-            _processorStream = new SoundTouchWaveStream(_waveChannel)
-            {
-                Tempo = _tempo
-            };
-            _waveOut = new WaveOutEvent
-            {
-                DesiredLatency = 100
-            };
+            _processorStream = new SoundTouchWaveStream(_waveChannel) {Tempo = _tempo};
+            _waveOut = new WaveOutEvent {DesiredLatency = 100};
 
             _waveOut.Init(_processorStream);
             _waveOut.PlaybackStopped += OnPlaybackStopped;

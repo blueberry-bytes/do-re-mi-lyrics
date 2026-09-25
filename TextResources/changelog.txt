@@ -4,6 +4,12 @@
 	</head>
 	<body style="font-family: Calibri">
 		<p>
+			<b>v1.2.1 - 2026-09-25</b>
+			<ul>
+				<li>- fixed a few more bugs</li>
+				<li>- refactorization</li>
+				<li>- switch to .NET 10.0</li>
+			</ul>
 			<b>v1.2.0 - 2022-01-19</b>
 			<ul>
 				<li>- fixed a few more bugs</li>

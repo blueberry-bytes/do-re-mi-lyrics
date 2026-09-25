@@ -4,33 +4,25 @@ using System.Runtime.CompilerServices;
 
 namespace Do_Re_Mi_Lyrics.Models;
 
-public class LyricsWord : INotifyPropertyChanged
+public class LyricsWord(LyricsLine line) : INotifyPropertyChanged
 {
-    internal LyricsLine Line;
-    private TimeSpan _endTime;
-    private bool _isNotProperTime;
+    internal LyricsLine Line = line;
     private bool _isPartOfWord;
-    private bool _isPlaying;
-    private bool _isSelected;
-    private TimeSpan _startTime;
-    private string _word = "";
-
-    public LyricsWord(LyricsLine line)
-    {
-        Line = line;
-    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public string EndTimeText => EndTime.ToString(@"\<mm\:ss\.ff\>");
 
-    public string StartTimeText => (PreviousWord == null || StartTime != PreviousWord.EndTime) && Line.FirstWord != this ? StartTime.ToString(@"\<mm\:ss\.ff\>") : "";
+    public string StartTimeText =>
+        (PreviousWord == null || StartTime != PreviousWord.EndTime) && Line.FirstWord != this
+            ? StartTime.ToString(@"\<mm\:ss\.ff\>")
+            : "";
 
     public bool IsNotProperTime
     {
-        get => _isNotProperTime;
+        get;
         set
         {
-            _isNotProperTime = value;
+            field = value;
             OnPropertyChanged();
         }
     }
@@ -47,48 +39,50 @@ public class LyricsWord : INotifyPropertyChanged
 
     public bool IsPlaying
     {
-        get => _isPlaying;
+        get;
         set
         {
-            _isPlaying = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public bool IsSelected
     {
-        get => _isSelected;
+        get;
         set
         {
-            _isSelected = value;
+            field = value;
             OnPropertyChanged();
         }
     }
 
     public string Word
     {
-        get => _word;
+        get;
         set
         {
-            _word = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    internal LyricsWord? NextWord => Line.LastWord == this || Line.LastWord == null || Line.Words.IndexOf(this) == -1
-        ? Line.NextLine?.FirstWord
-        : Line.Words[Line.Words.IndexOf(this) + 1];
+    internal LyricsWord? NextWord =>
+        Line.LastWord == this || Line.LastWord == null || Line.Words.IndexOf(this) == -1
+            ? Line.NextLine?.FirstWord
+            : Line.Words[Line.Words.IndexOf(this) + 1];
 
-    internal LyricsWord? PreviousWord => Line.FirstWord == this || Line.FirstWord == null || Line.Words.IndexOf(this) == -1
-        ? Line.PreviousLine?.LastWord
-        : Line.Words[Line.Words.IndexOf(this) - 1];
+    internal LyricsWord? PreviousWord =>
+        Line.FirstWord == this || Line.FirstWord == null || Line.Words.IndexOf(this) == -1
+            ? Line.PreviousLine?.LastWord
+            : Line.Words[Line.Words.IndexOf(this) - 1];
 
     internal TimeSpan EndTime
     {
-        get => _endTime;
+        get;
         set
         {
-            _endTime = value;
+            field = value;
             CheckProperTime();
             NextWord?.CheckProperTime();
             OnPropertyChanged(nameof(EndTimeText));
@@ -97,10 +91,10 @@ public class LyricsWord : INotifyPropertyChanged
 
     internal TimeSpan StartTime
     {
-        get => _startTime;
+        get;
         set
         {
-            _startTime = value;
+            field = value;
             CheckProperTime();
             NextWord?.CheckProperTime();
             if (this == Line.FirstWord)
