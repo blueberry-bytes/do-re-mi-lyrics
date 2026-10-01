@@ -2,13 +2,14 @@
 using System.IO;
 using System.Windows;
 using NAudio.Wave;
+using Do_Re_Mi_Lyrics.Helper;
 using SoundTouch.Net.NAudioSupport;
 
 namespace Do_Re_Mi_Lyrics.Models;
 
 public class Audio : IDisposable
 {
-    private const int SkipInterval = 5;
+    private const double SkipIntervalSeconds = 1;
     private SoundTouchWaveStream? _processorStream;
     private WaveStream? _reader;
     private double _tempo;
@@ -65,18 +66,21 @@ public class Audio : IDisposable
                 return;
             }
 
-            if (_waveChannel.CurrentTime.TotalSeconds < SkipInterval)
+            TimeSpan skip = GetSkipTime();
+            if (_waveChannel.CurrentTime < skip)
             {
                 _waveChannel.Position = 0;
             }
             else
             {
-                _waveChannel.CurrentTime -= new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo));
+                _waveChannel.CurrentTime -= skip;
             }
+
+            Global.MainWindowViewModel.RefreshPlayPosition();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -89,20 +93,22 @@ public class Audio : IDisposable
                 return;
             }
 
-            if (_waveChannel.CurrentTime >
-                _waveChannel.TotalTime - new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo)))
+            TimeSpan skip = GetSkipTime();
+            if (_waveChannel.CurrentTime > _waveChannel.TotalTime - skip)
             {
                 _waveChannel.CurrentTime = _waveChannel.TotalTime;
                 Pause();
             }
             else
             {
-                _waveChannel.CurrentTime += new TimeSpan(0, 0, 0, (int) (SkipInterval * 1000 * Tempo));
+                _waveChannel.CurrentTime += skip;
             }
+
+            Global.MainWindowViewModel.RefreshPlayPosition();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -128,7 +134,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -149,7 +155,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -169,7 +175,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -189,7 +195,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -209,7 +215,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -228,7 +234,7 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -247,7 +253,31 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
+        }
+    }
+
+    internal void ReleaseFileWhile(string filePath, Action action)
+    {
+        bool isFileOpened = _reader is AudioFileReader && string.Equals(Path.GetFullPath(filePath),
+            Path.GetFullPath(Global.MainWindowViewModel.AudioFilePath), StringComparison.OrdinalIgnoreCase);
+        if (!isFileOpened)
+        {
+            action();
+            return;
+        }
+
+        Pause();
+        TimeSpan currentTime = CurrentTime;
+        CloseWaveOut();
+        try
+        {
+            action();
+        }
+        finally
+        {
+            OpenAudio();
+            CurrentTime = currentTime;
         }
     }
 
@@ -259,7 +289,7 @@ public class Audio : IDisposable
         {
             if (Path.GetExtension(Global.MainWindowViewModel.AudioFilePath) == ".flac")
             {
-                MediaFoundationReader mediaFoundationReader = new(Global.MainWindowViewModel.AudioFilePath);
+                using MediaFoundationReader mediaFoundationReader = new(Global.MainWindowViewModel.AudioFilePath);
                 WaveFormat outFormat = new(44100, mediaFoundationReader.WaveFormat.Channels);
 
                 using MediaFoundationResampler resampler = new(mediaFoundationReader, outFormat);
@@ -282,8 +312,13 @@ public class Audio : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
+    }
+
+    private TimeSpan GetSkipTime()
+    {
+        return TimeSpan.FromSeconds(SkipIntervalSeconds * Tempo);
     }
 
     private void CloseWaveOut()
@@ -292,6 +327,10 @@ public class Audio : IDisposable
         _waveOut.Dispose();
 
         _processorStream?.Dispose();
+        _waveChannel?.Dispose();
+        _processorStream = null;
+        _waveChannel = null;
+        _reader = null;
     }
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs args)

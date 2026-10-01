@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Do_Re_Mi_Lyrics.Helper;
 using Do_Re_Mi_Lyrics.Models;
 using Do_Re_Mi_Lyrics.ViewModels;
 
@@ -58,6 +59,17 @@ public partial class MainWindow
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        if (_viewModel.IsSynchronizing)
+        {
+            if (e.Key == Key.Escape)
+            {
+                _viewModel.CancelSynchro();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
         switch (e.Key)
         {
@@ -74,7 +86,7 @@ public partial class MainWindow
                 _viewModel.OpenLyricsFile();
                 break;
             case Key.F5 when Keyboard.Modifiers == ModifierKeys.None:
-                Global.Lyrics.SetEndingTimeToPreviousLine();
+                Global.Lyrics.SetEndTimeOfPreviousWord();
                 break;
             case Key.F6 when Keyboard.Modifiers == ModifierKeys.None:
                 Global.Lyrics.SetTimeToCurrentWord();
@@ -82,11 +94,20 @@ public partial class MainWindow
             case Key.F8 when Keyboard.Modifiers == ModifierKeys.None:
                 Global.Lyrics.RemoveStartTime();
                 break;
+            case Key.F11 when Keyboard.Modifiers == ModifierKeys.None:
+                _viewModel.AutomaticSynchro();
+                break;
+            case Key.F11 when Keyboard.Modifiers == ModifierKeys.Control:
+                _viewModel.RealignCurrentLine();
+                break;
             case Key.F12 when Keyboard.Modifiers == ModifierKeys.None:
                 _viewModel.ChangeEditMode();
                 break;
             case Key.S when Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift):
                 _viewModel.SaveLyricsToNewFile();
+                break;
+            case Key.A when Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift):
+                _viewModel.SaveLyricsToAudioFile();
                 break;
             case Key.S when Keyboard.Modifiers == ModifierKeys.Control:
                 _viewModel.SaveLyrics();
@@ -169,6 +190,10 @@ public partial class MainWindow
         {
             e.Cancel = true;
         }
+        else
+        {
+            _viewModel.CancelSynchro();
+        }
 
         Global.Audio.Dispose();
 
@@ -183,7 +208,6 @@ public partial class MainWindow
         }
         catch
         {
-            // ignored
         }
     }
 
@@ -212,13 +236,18 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
     private void SaveLyricsAsClick(object sender, RoutedEventArgs e)
     {
         _viewModel.SaveLyricsToNewFile();
+    }
+
+    private void SaveLyricsToAudioFileClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.SaveLyricsToAudioFile();
     }
 
     private void NewLyricsClick(object sender, RoutedEventArgs e)
@@ -234,6 +263,23 @@ public partial class MainWindow
     private void EditClick(object sender, RoutedEventArgs e)
     {
         _viewModel.ChangeEditMode();
+    }
+
+    private void AutomaticSynchroClick(object sender, RoutedEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            _viewModel.RealignCurrentLine();
+        }
+        else
+        {
+            _viewModel.AutomaticSynchro();
+        }
+    }
+
+    private void CancelSynchroClick(object sender, RoutedEventArgs e)
+    {
+        _viewModel.CancelSynchro();
     }
 
     private void UndoClick(object sender, RoutedEventArgs e)

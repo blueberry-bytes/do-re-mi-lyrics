@@ -11,6 +11,9 @@
         <Setting Name="LyricsFilePath" Type="System.String" Scope="User">
             <Value Profile="(Default)"/>
         </Setting>
+        <Setting Name="IsLyricsInAudioFile" Type="System.Boolean" Scope="User">
+            <Value Profile="(Default)">False</Value>
+        </Setting>
         <Setting Name="AudioFilesPath" Type="System.String" Scope="User">
             <Value Profile="(Default)"/>
         </Setting>

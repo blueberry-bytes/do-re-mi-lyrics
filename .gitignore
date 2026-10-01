@@ -397,3 +397,8 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 /Installer/Do-Re-Mi Lyrics Setup.exe
+
+# Claude Code
+CLAUDE.md
+.claude/
+claudeCodeEditorTabs.xml

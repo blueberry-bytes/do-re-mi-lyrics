@@ -16,9 +16,29 @@
         <ApplicationIcon>Images\DO-RE-Mi-icon.ico</ApplicationIcon>
         <AssemblyVersion></AssemblyVersion>
         <FileVersion></FileVersion>
-        <PackageLicenseFile>D:\Źródła własne\GitHub\do-re-mi-lyrics\TextResources\license.html</PackageLicenseFile>
-        <Version>1.2.1</Version>
+        <Version>1.3.0</Version>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Update="ffmpeg\*.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <TargetPath>ffmpeg\%(Filename)%(Extension)</TargetPath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="PythonScripts\*.py;PythonScripts\*.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Python\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <TargetPath>Python\%(Filename)%(Extension)</TargetPath>
+        </None>
+    </ItemGroup>
 
     <ItemGroup>
         <None Remove="Do-Re-Mi Lyrics.csproj.vspscc"/>
@@ -43,16 +63,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Resource Include="Images\Do-Re-Mi-icon.ico"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="NAudio" Version="1.9.0"/>
         <PackageReference Include="SoundTouch.Net" Version="2.3.2"/>
         <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2"/>
+        <PackageReference Include="TagLibSharp" Version="2.3.0"/>
     </ItemGroup>
 
     <ItemGroup>
+        <Resource Include="Images\Do-Re-Mi-icon.ico"/>
         <Resource Include="Images\audio-file.png"/>
         <Resource Include="Images\Do-Re-Mi-icon.png"/>
         <Resource Include="Images\edit.png"/>
@@ -71,6 +89,10 @@
         <EmbeddedResource Include="TextResources\changelog.txt"/>
         <EmbeddedResource Include="TextResources\help.txt"/>
         <EmbeddedResource Include="TextResources\license.txt"/>
+        <None Remove="Images\synchro.png"/>
+        <Resource Include="Images\synchro.png"/>
+        <None Remove="Images\save-to-audio.png"/>
+        <Resource Include="Images\save-to-audio.png"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -6,12 +6,18 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
+using Do_Re_Mi_Lyrics.Helper;
 
 namespace Do_Re_Mi_Lyrics.Models;
 
 public partial class Lyrics : INotifyPropertyChanged
 {
-    private LyricsLine? _currentLine;
+    private static readonly TimeSpan LargeGap = TimeSpan.FromSeconds(1.5);
+
+    private static readonly TimeSpan MediumGap = TimeSpan.FromSeconds(1);
+
+    private static readonly TimeSpan ShortGap = TimeSpan.FromSeconds(0.5);
+
     private LyricsWord? _currentPlayingWord;
     private LyricsWord? _currentWord;
     private ObservableCollection<LyricsLine> _lyricsLines = [];
@@ -29,9 +35,13 @@ public partial class Lyrics : INotifyPropertyChanged
         }
     }
 
-    internal int CurrentLineIndex => _currentLine != null ? LyricsLines.IndexOf(_currentLine) : 0;
+    internal int CurrentLineIndex => CurrentLine != null ? LyricsLines.IndexOf(CurrentLine) : 0;
     internal LyricsLine? FirstLine => LyricsLines.Count > 0 ? LyricsLines[0] : null;
     internal LyricsLine? LastLine => LyricsLines.Count > 0 ? LyricsLines[^1] : null;
+
+    internal LyricsLine? CurrentLine { get; private set; }
+
+    private IEnumerable<LyricsWord> AllWords => LyricsLines.SelectMany(lyricsLine => lyricsLine.Words);
 
     public Lyrics Clone()
     {
@@ -40,10 +50,9 @@ public partial class Lyrics : INotifyPropertyChanged
         {
             LyricsLine newLyricsLine = lyricsLine.Clone(lyrics);
             lyrics.LyricsLines.Add(newLyricsLine);
-            newLyricsLine.CheckProperTime();
-            if (lyricsLine == _currentLine)
+            if (lyricsLine == CurrentLine)
             {
-                lyrics._currentLine = lyricsLine;
+                lyrics.CurrentLine = newLyricsLine;
             }
 
             for (int i = 0; i < lyricsLine.Words.Count; i++)
@@ -51,17 +60,42 @@ public partial class Lyrics : INotifyPropertyChanged
                 LyricsWord lyricsWord = lyricsLine.Words[i];
                 if (lyricsWord.IsSelected)
                 {
-                    lyrics._currentWord = lyrics.LyricsLines[^1].Words[i];
+                    lyrics._currentWord = newLyricsLine.Words[i];
                 }
 
                 if (lyricsWord.IsPlaying)
                 {
-                    lyrics._currentPlayingWord = lyrics.LyricsLines[^1].Words[i];
+                    lyrics._currentPlayingWord = newLyricsLine.Words[i];
                 }
             }
         }
 
+        lyrics.CheckProperTimes();
         return lyrics;
+    }
+
+    public void CheckProperTimes()
+    {
+        foreach (LyricsLine lyricsLine in LyricsLines)
+        {
+            lyricsLine.RefreshTimes();
+        }
+    }
+
+    internal static string CleanPastedText(string text)
+    {
+        IEnumerable<string> lines = text.Replace("\r", "").Split('\n').Select(line =>
+        {
+            line = SquareBracketTextRegex().Replace(line, "");
+            line = PunctuationRegex().Replace(line, "");
+            line = SlashRegex().Replace(line, " ");
+            line = DotNotBetweenNumbersRegex().Replace(line, "");
+            line = NumberWords.ReplaceNumbers(line);
+            line = MultipleSpacesRegex().Replace(line, " ");
+            return line.Trim().ToLower();
+        });
+
+        return string.Join(Environment.NewLine, lines.Where(line => line.Length > 0));
     }
 
     internal void ParseLyrics(string text, int selectedWordIndex = 0, bool isTest = false)
@@ -71,7 +105,7 @@ public partial class Lyrics : INotifyPropertyChanged
             text = text.ToLower();
             text = text.Replace(",", "");
             text = DotNotBetweenNumbersRegex().Replace(text, "");
-            if (GetLyricsText(out int _) == text)
+            if (GetLyricsTextWithTimestamps(out int _) == text)
             {
                 return;
             }
@@ -81,8 +115,9 @@ public partial class Lyrics : INotifyPropertyChanged
                 Global.MainWindowViewModel.AddToUndoList();
             }
 
-            _currentLine = null;
+            CurrentLine = null;
             _currentWord = null;
+            _currentPlayingWord = null;
             text = text.Replace("\r", "");
             LyricsLines.Clear();
             List<string> lines = [.. text.Split('\n')];
@@ -95,50 +130,25 @@ public partial class Lyrics : INotifyPropertyChanged
             {
                 LyricsLine lyricsLine = new(this);
                 LyricsLines.Add(lyricsLine);
-                Regex regex = PatternLineRegex();
-                Match match = regex.Match(line);
+                Match match = PatternLineRegex().Match(line);
                 string restOfLine = line;
-                TimeSpan lineStartTime = TimeSpan.Zero;
                 if (match.Success)
                 {
-                    lineStartTime = new TimeSpan(0, 0, int.Parse(match.Groups[1].Value),
+                    lyricsLine.StartTime = new TimeSpan(0, 0, int.Parse(match.Groups[1].Value),
                         int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value) * 10);
 
                     restOfLine = match.Groups[4].Value;
                 }
 
-                List<string> words = [.. restOfLine.Split(' ')];
-                foreach (string word in words.Where(word =>
-                             !string.IsNullOrWhiteSpace(word)))
+                foreach (string word in restOfLine.Split(' ').Where(word => !string.IsNullOrWhiteSpace(word)))
                 {
-                    ParseWordTimes(word, lyricsLine, lineStartTime, selectedWordIndex);
-                }
-
-                lyricsLine.CheckProperTime();
-            }
-
-            if (FirstLine?.StartTime > new TimeSpan(0, 0, 3))
-            {
-                LyricsLine newLine = new(this);
-                LyricsLines.Insert(0, newLine);
-            }
-
-            if (LastLine?.FirstWord != LastLine?.LastWord || !string.IsNullOrWhiteSpace(LastLine?.FirstWord?.Word))
-            {
-                LyricsLine newLine = new(this);
-                LyricsLines.Add(newLine);
-            }
-
-            foreach (LyricsLine line in LyricsLines)
-            {
-                foreach (LyricsWord word in line.Words)
-                {
-                    if (word.EndTime == new TimeSpan(0))
-                    {
-                        word.EndTime = word.NextWord?.StartTime ?? new TimeSpan(0);
-                    }
+                    ParseWord(word, lyricsLine, selectedWordIndex);
                 }
             }
+
+            UpdateLeadingEmptyLine(false);
+            AddTrailingEmptyLine();
+            NormalizeTimes();
 
             if (_currentWord == null)
             {
@@ -152,7 +162,7 @@ public partial class Lyrics : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -167,40 +177,76 @@ public partial class Lyrics : INotifyPropertyChanged
 
             Global.MainWindowViewModel.AddToUndoList();
             SelectPreviousWord();
+            if (_currentWord is not { } word)
+            {
+                return;
+            }
 
-            _currentWord?.PreviousWord?.EndTime = new TimeSpan(0, 0, 0);
-
-            _currentWord?.StartTime = new TimeSpan(0, 0, 0);
+            word.Line.IsUncertain = false;
+            word.PreviousWord?.EndTime = null;
+            word.StartTime = null;
+            if (word.IsFirstInLine)
+            {
+                word.Line.StartTime = TimeSpan.Zero;
+            }
 
             Global.MainWindowViewModel.IsSaved = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
-    internal void SetEndingTimeToPreviousLine()
+    internal void SetEndTimeOfPreviousWord()
     {
         try
         {
-            Global.MainWindowViewModel.AddToUndoList();
-            TimeSpan timeSpan = Global.Audio.CurrentTime;
-
-            _currentWord?.PreviousWord?.EndTime = timeSpan;
-
-            if (_currentWord?.StartTime < timeSpan)
+            if (_currentWord is not {PreviousWord: { } previousWord} word)
             {
-                _currentWord.StartTime = timeSpan;
+                return;
             }
 
-            _currentWord?.UpdateStartTimeText();
+            Global.MainWindowViewModel.AddToUndoList();
+            word.Line.IsUncertain = false;
+            TimeSpan currentTime = Global.Audio.CurrentTime;
+
+            if (word.IsFirstInLine)
+            {
+                if (word.Line.StartTime < currentTime)
+                {
+                    word.Line.StartTime = currentTime;
+                }
+
+                while (word.Line.PreviousLine is {IsEmpty: true} tooShortEmptyLine &&
+                       word.Line.StartTime - currentTime <= LargeGap)
+                {
+                    LyricsLines.Remove(tooShortEmptyLine);
+                }
+
+                if (word.Line.PreviousLine is {IsEmpty: true} emptyLine)
+                {
+                    emptyLine.StartTime = currentTime;
+                    emptyLine.PreviousLine?.LastWord?.EndTime = null;
+                }
+                else
+                {
+                    previousWord.EndTime = currentTime;
+                    ApplyGapBeforeLine(word.Line);
+                }
+            }
+            else
+            {
+                TimeSpan? startTime = word.EffectiveStartTime;
+                previousWord.EndTime = currentTime;
+                word.StartTime = startTime > currentTime ? startTime : null;
+            }
 
             Global.MainWindowViewModel.IsSaved = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -208,29 +254,41 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
+            if (_currentWord is not { } word)
+            {
+                return;
+            }
+
             Global.MainWindowViewModel.AddToUndoList();
+            word.Line.IsUncertain = false;
             TimeSpan currentTime = Global.Audio.CurrentTime;
-            if (_currentWord?.PreviousWord != null && _currentLine?.PreviousLine != null &&
-                _currentWord == _currentLine?.FirstWord && _currentWord.PreviousWord.EndTime > TimeSpan.Zero &&
-                currentTime - _currentWord.PreviousWord.EndTime > TimeSpan.FromSeconds(1.5))
+
+            if (word.EndTime <= currentTime)
             {
-                InsertEmptyLineBeforeCurrent(currentTime);
+                word.EndTime = null;
             }
 
-            if (_currentWord?.PreviousWord != null && (_currentWord.PreviousWord.EndTime == TimeSpan.Zero ||
-                                                       currentTime - _currentWord.PreviousWord.EndTime <
-                                                       TimeSpan.FromSeconds(0.5)))
+            if (word.IsFirstInLine)
             {
-                _currentWord.PreviousWord.EndTime = currentTime;
+                word.Line.StartTime = currentTime;
+                word.StartTime = null;
+                ApplyChangedLineStart(word.Line);
             }
-
-            if (_currentWord != null)
+            else if (word.PreviousWordInLine is { } previousWord)
             {
-                _currentWord.StartTime = currentTime;
-
-                if (_currentWord == FirstLine?.FirstWord && currentTime > TimeSpan.Zero)
+                if (!HasStaleEndTime(previousWord) && previousWord.EndTime is { } previousEndTime &&
+                    currentTime - previousEndTime >= ShortGap)
                 {
-                    InsertEmptyLineAtBeginning(currentTime);
+                    word.StartTime = currentTime;
+                    if (currentTime - previousEndTime > LargeGap)
+                    {
+                        ApplyGapBeforeLine(SplitLineBefore(word));
+                    }
+                }
+                else
+                {
+                    previousWord.EndTime = currentTime;
+                    word.StartTime = null;
                 }
             }
 
@@ -240,7 +298,7 @@ public partial class Lyrics : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -251,14 +309,14 @@ public partial class Lyrics : INotifyPropertyChanged
             _currentWord?.IsSelected = false;
 
             _currentWord = word;
-            _currentLine = word?.Line;
+            CurrentLine = word?.Line;
             _currentWord?.IsSelected = true;
 
             Global.MainWindowViewModel.CheckScrollView();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -273,7 +331,7 @@ public partial class Lyrics : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -288,7 +346,7 @@ public partial class Lyrics : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -296,16 +354,14 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            if (_currentLine?.NextLine == null)
+            if (CurrentLine?.LastWord?.NextWord is { } nextWord)
             {
-                return;
+                SelectWord(nextWord);
             }
-
-            SelectWord(_currentLine.NextLine?.FirstWord);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -313,16 +369,14 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            if (_currentLine?.PreviousLine == null)
+            if (CurrentLine?.FirstWord?.PreviousWord is { } previousWord)
             {
-                return;
+                SelectWord(previousWord.Line.FirstWord);
             }
-
-            SelectWord(_currentLine?.PreviousLine?.FirstWord);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -330,46 +384,21 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            if (_currentWord == _currentLine?.FirstWord || _currentWord?.PreviousWord == null || _currentLine == null)
+            if (_currentWord is not {IsFirstInLine: false} word || CurrentLine == null)
             {
                 return;
             }
 
             Global.MainWindowViewModel.AddToUndoList();
-            LyricsLine newLine = new(this);
-            if (_currentLine.NextLine != null)
-            {
-                LyricsLines.Insert(LyricsLines.IndexOf(_currentLine.NextLine), newLine);
-            }
-            else
-            {
-                LyricsLines.Add(newLine);
-            }
-
-
-            if (_currentLine.LastWord != null)
-            {
-                LyricsWord word = _currentLine.LastWord;
-                do
-                {
-                    _currentLine.RemoveWord(word);
-                    newLine.InsertWord(0, word);
-                    word.Line = newLine;
-                    if (word.PreviousWord == null)
-                    {
-                        break;
-                    }
-
-                    word = word.PreviousWord;
-                } while (word != _currentWord.PreviousWord);
-            }
-
-            _currentLine = newLine;
+            LyricsLine newLine = SplitLineBefore(word);
+            CurrentLine = newLine;
+            ApplyGapBeforeLine(newLine);
+            NormalizeTimes();
             Global.MainWindowViewModel.IsSaved = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -377,41 +406,31 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            if (_currentWord != _currentLine?.FirstWord || _currentWord?.PreviousWord == null ||
-                _currentLine?.PreviousLine == null)
+            if (_currentWord is not {IsFirstInLine: true} word || CurrentLine?.PreviousLine is not { } previousLine)
             {
                 return;
             }
 
             Global.MainWindowViewModel.AddToUndoList();
-            LyricsLine deletedLine = _currentLine;
-            LyricsLine previousLine = _currentLine.PreviousLine;
+            LyricsLine currentLine = CurrentLine;
 
-            LyricsWord word = _currentWord;
-            while (word.Line == _currentLine)
+            if (previousLine.IsEmpty)
             {
-                previousLine.AddWord(word);
-                deletedLine.RemoveWord(word);
-                word.Line = previousLine;
-                if (word.NextWord == null)
-                {
-                    break;
-                }
-
-                word = word.NextWord;
+                RemoveEmptyLine(previousLine);
+                CloseShortGapBeforeLine(currentLine);
+            }
+            else
+            {
+                MergeNextLine(previousLine, currentLine);
+                CurrentLine = word.Line;
             }
 
-            LyricsLines.Remove(deletedLine);
-
-            _currentLine = previousLine;
-
-            RemoveEmptyWords();
-
+            NormalizeTimes();
             Global.MainWindowViewModel.IsSaved = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -419,41 +438,37 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            if (_currentWord != _currentLine?.LastWord || _currentWord?.NextWord == null ||
-                _currentLine?.NextLine == null)
+            if (CurrentLine is not { } currentLine || _currentWord == null || _currentWord != currentLine.LastWord ||
+                currentLine.NextLine is not { } nextLine)
             {
                 return;
             }
 
             Global.MainWindowViewModel.AddToUndoList();
-            LyricsLine nextLine = _currentLine.NextLine;
-            LyricsWord word = _currentWord.NextWord;
-            while (word.Line == nextLine)
-            {
-                _currentLine.AddWord(word);
-                nextLine.RemoveWord(word);
-                word.Line = _currentLine;
-                if (word.NextWord == null)
-                {
-                    break;
-                }
 
-                word = word.NextWord;
+            if (nextLine.IsEmpty)
+            {
+                RemoveEmptyLine(nextLine);
+                if (currentLine.NextLine is { } followingLine)
+                {
+                    CloseShortGapBeforeLine(followingLine);
+                }
+            }
+            else
+            {
+                MergeNextLine(currentLine, nextLine);
             }
 
-            LyricsLines.Remove(nextLine);
-
-            RemoveEmptyWords();
-
+            NormalizeTimes();
             Global.MainWindowViewModel.IsSaved = false;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
-    internal string GetLyricsText(out int caretIndex)
+    internal string GetLyricsTextWithTimestamps(out int caretIndex)
     {
         caretIndex = 0;
         string text = "";
@@ -473,7 +488,27 @@ public partial class Lyrics : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
+            return "";
+        }
+
+        return text;
+    }
+
+    internal string GetLyricsText()
+    {
+        string text = "";
+        try
+        {
+            foreach (LyricsLine lyricsLine in LyricsLines)
+            {
+                text += lyricsLine.LineText;
+                text += Environment.NewLine;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Show(ex);
             return "";
         }
 
@@ -484,40 +519,31 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         try
         {
-            _currentLine = FirstLine;
-            SelectWord(_currentLine?.FirstWord);
+            SelectWord(AllWords.FirstOrDefault());
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
     internal TimeSpan GetCurrentWordStartTime()
     {
-        if (_currentWord == null)
+        for (LyricsWord? word = _currentWord; word != null; word = word.PreviousWord)
         {
-            return TimeSpan.Zero;
-        }
-
-        LyricsWord word = _currentWord;
-
-        while (word.StartTime == TimeSpan.Zero && word != FirstLine?.FirstWord)
-        {
-            if (word.PreviousWord != null)
+            if (word.EffectiveStartTime is { } startTime)
             {
-                word = word.PreviousWord;
+                return startTime;
             }
         }
 
-        TimeSpan timeSpan = word.Line.StartTime;
-        return timeSpan;
+        return TimeSpan.Zero;
     }
 
     internal void ChangePlayingWord()
     {
-        if (_currentPlayingWord != null && Global.Audio.CurrentTime >= _currentPlayingWord.StartTime &&
-            Global.Audio.CurrentTime <= _currentPlayingWord.EndTime)
+        TimeSpan currentTime = Global.Audio.CurrentTime;
+        if (_currentPlayingWord != null && IsPlayingAt(_currentPlayingWord, currentTime))
         {
             return;
         }
@@ -528,139 +554,437 @@ public partial class Lyrics : INotifyPropertyChanged
             _currentPlayingWord = null;
         }
 
-        LyricsWord? word = FirstLine?.FirstWord;
-
-        while (word != null)
+        LyricsWord? word = AllWords.FirstOrDefault(word => IsPlayingAt(word, currentTime));
+        if (word == null)
         {
-            if (Global.Audio.CurrentTime >= word.StartTime && Global.Audio.CurrentTime <= word.EndTime)
-            {
-                word.IsPlaying = true;
-                _currentPlayingWord = word;
-                break;
-            }
-
-            word = word.NextWord;
+            return;
         }
+
+        word.IsPlaying = true;
+        _currentPlayingWord = word;
     }
 
     internal void ChangeStartTimeOfCurrentWord(double seconds)
     {
+        if (_currentWord == null)
+        {
+            return;
+        }
+
         Global.MainWindowViewModel.AddToUndoList();
-        ChangeStartTimeOfWord(_currentWord, seconds);
+        CurrentLine?.IsUncertain = false;
+        ShiftStartOfWord(_currentWord, TimeSpan.FromSeconds(seconds));
         Global.MainWindowViewModel.IsSaved = false;
     }
 
     internal void ChangeStartingTimeOfAllWordsFromCurrent(double seconds)
     {
-        Global.MainWindowViewModel.AddToUndoList();
-        LyricsWord? word = _currentWord;
-        do
+        if (_currentWord is not { } currentWord)
         {
-            ChangeStartTimeOfWord(word, seconds);
-            word = word?.NextWord;
-        } while (word != null);
+            return;
+        }
 
+        Global.MainWindowViewModel.AddToUndoList();
+        CurrentLine?.IsUncertain = false;
+        TimeSpan shift = TimeSpan.FromSeconds(seconds);
+        LyricsLine currentLine = currentWord.Line;
+
+        ShiftStartOfWord(currentWord, shift);
+        currentWord.EndTime = ShiftTime(currentWord.EndTime, shift);
+        foreach (LyricsWord word in currentLine.Words.Skip(currentLine.Words.IndexOf(currentWord) + 1))
+        {
+            ShiftExplicitTimes(word, shift);
+        }
+
+        foreach (LyricsLine line in LyricsLines.Skip(LyricsLines.IndexOf(currentLine) + 1))
+        {
+            line.StartTime = ShiftTime(line.StartTime, shift) ?? TimeSpan.Zero;
+            foreach (LyricsWord word in line.Words)
+            {
+                ShiftExplicitTimes(word, shift);
+            }
+        }
+
+        NormalizeTimes();
         Global.MainWindowViewModel.IsSaved = false;
     }
 
-    private static void ChangeStartTimeOfWord(LyricsWord? word, double seconds)
+    internal void CloseShortGapsAndInsertEmptyLines()
     {
-        if (word != null && word.StartTime < TimeSpan.FromSeconds(seconds))
+        foreach (LyricsLine line in LyricsLines.Where(line => line.IsEmpty).ToList())
         {
-            seconds = word.StartTime.TotalSeconds;
+            LyricsLines.Remove(line);
         }
 
-        word?.PreviousWord?.EndTime = word.PreviousWord.EndTime.Add(TimeSpan.FromSeconds(seconds));
+        foreach (LyricsLine line in LyricsLines)
+        {
+            if (line.FirstWord is {StartTime: { } firstWordStartTime} firstWord)
+            {
+                line.StartTime = firstWordStartTime;
+                firstWord.StartTime = null;
+            }
+        }
 
-        word?.StartTime = word.StartTime.Add(TimeSpan.FromSeconds(seconds));
+        ApplyTimingCorrections();
+
+        if (CurrentLine == null || !LyricsLines.Contains(CurrentLine))
+        {
+            SelectFirstLine();
+        }
+    }
+
+    internal void MarkUncertainLines(IReadOnlySet<TimeSpan> lineStartTimes)
+    {
+        foreach (LyricsLine line in LyricsLines.Where(line => !line.IsEmpty && lineStartTimes.Contains(line.StartTime)))
+        {
+            line.IsUncertain = true;
+        }
+    }
+
+    internal bool ApplyTimingCorrectionsWithUndo()
+    {
+        Lyrics correctedLyrics = Clone();
+        correctedLyrics.ApplyTimingCorrections();
+        if (correctedLyrics.GetLyricsTextWithTimestamps(out _) == GetLyricsTextWithTimestamps(out _))
+        {
+            return false;
+        }
+
+        Global.MainWindowViewModel.AddToUndoList();
+        ApplyTimingCorrections();
+        return true;
+    }
+
+    internal void ApplyRealignedLine(LyricsLine line)
+    {
+        if (line.FirstWord is {StartTime: { } firstWordStartTime} firstWord)
+        {
+            line.StartTime = firstWordStartTime;
+            firstWord.StartTime = null;
+        }
+
+        CloseShortGapsInsideLine(line);
+        List<LyricsLine> lines = SplitLineAtLargeGaps(line);
+        ApplyChangedLineStart(lines[0]);
+        foreach (LyricsLine splitLine in lines.Skip(1))
+        {
+            ApplyGapBeforeLine(splitLine);
+        }
+
+        ApplyChangedLineEnd(lines[^1]);
+        NormalizeTimes();
+    }
+
+    private void MergeNextLine(LyricsLine line, LyricsLine nextLine)
+    {
+        if (nextLine.FirstWord is { } firstWord)
+        {
+            firstWord.StartTime ??= nextLine.StartTime;
+        }
+
+        line.IsUncertain |= nextLine.IsUncertain;
+        foreach (LyricsWord movedWord in nextLine.Words.ToList())
+        {
+            nextLine.RemoveWord(movedWord);
+            movedWord.Line = line;
+            line.AddWord(movedWord);
+        }
+
+        LyricsLines.Remove(nextLine);
+        NormalizeTimes();
+        CloseShortGapsInsideLine(line);
+    }
+
+    private void MergeShortLines()
+    {
+        foreach (LyricsLine line in LyricsLines.ToList().Where(line => !line.IsEmpty))
+        {
+            while (LyricsLines.Contains(line) && line.NextLine is {IsEmpty: false} nextLine &&
+                   nextLine.StartTime > line.StartTime && nextLine.StartTime - line.StartTime < LargeGap)
+            {
+                MergeNextLine(line, nextLine);
+            }
+        }
+    }
+
+    private LyricsLine SplitLineBefore(LyricsWord word)
+    {
+        LyricsLine line = word.Line;
+        TimeSpan newLineStartTime = word.EffectiveStartTime ?? TimeSpan.Zero;
+        LyricsLine newLine = new(this) {IsUncertain = line.IsUncertain};
+        LyricsLines.Insert(LyricsLines.IndexOf(line) + 1, newLine);
+        newLine.StartTime = newLineStartTime;
+
+        foreach (LyricsWord movedWord in line.Words.Skip(line.Words.IndexOf(word)).ToList())
+        {
+            line.RemoveWord(movedWord);
+            movedWord.Line = newLine;
+            newLine.AddWord(movedWord);
+        }
+
+        word.StartTime = null;
+        return newLine;
+    }
+
+    private List<LyricsLine> SplitLineAtLargeGaps(LyricsLine line)
+    {
+        List<LyricsLine> lines = [line];
+        for (int i = 1; i < lines[^1].Words.Count; i++)
+        {
+            LyricsWord previousWord = lines[^1].Words[i - 1];
+            LyricsWord word = lines[^1].Words[i];
+            if (word.StartTime - previousWord.EndTime > LargeGap)
+            {
+                lines.Add(SplitLineBefore(word));
+                i = 0;
+            }
+        }
+
+        return lines;
+    }
+
+    private static void CloseShortGapsInsideLine(LyricsLine line)
+    {
+        for (int i = 1; i < line.Words.Count; i++)
+        {
+            LyricsWord previousWord = line.Words[i - 1];
+            LyricsWord word = line.Words[i];
+            if (word.StartTime is not { } startTime || previousWord.EndTime is not { } previousEndTime)
+            {
+                continue;
+            }
+
+            TimeSpan gap = startTime - previousEndTime;
+            if (gap >= TimeSpan.Zero && gap < ShortGap)
+            {
+                previousWord.EndTime = startTime;
+                word.StartTime = null;
+            }
+        }
+    }
+
+    private static void MoveLineStartAfterOverlappingWord(LyricsLine line)
+    {
+        if (line.FirstWord is not { } firstWord || line.PreviousLine is not {LastWord.EndTime: { } previousEndTime} ||
+            previousEndTime <= line.StartTime || !(firstWord.EffectiveEndTime > previousEndTime))
+        {
+            return;
+        }
+
+        line.StartTime = previousEndTime;
+        if (firstWord.StartTime < previousEndTime)
+        {
+            firstWord.StartTime = null;
+        }
+    }
+
+    private static bool HasStaleEndTime(LyricsWord word)
+    {
+        return word.EndTime <= word.EffectiveStartTime;
+    }
+
+    private static bool IsPlayingAt(LyricsWord word, TimeSpan time)
+    {
+        return time >= word.EffectiveStartTime && time <= word.EffectiveEndTime;
+    }
+
+    private static TimeSpan? ShiftTime(TimeSpan? time, TimeSpan shift)
+    {
+        return time is { } value ? value + shift < TimeSpan.Zero ? TimeSpan.Zero : value + shift : null;
+    }
+
+    private static void ShiftExplicitTimes(LyricsWord word, TimeSpan shift)
+    {
+        word.StartTime = ShiftTime(word.StartTime, shift);
+        word.EndTime = ShiftTime(word.EndTime, shift);
+    }
+
+    private static void ShiftStartOfWord(LyricsWord word, TimeSpan shift)
+    {
+        if (word.IsFirstInLine)
+        {
+            word.Line.StartTime = ShiftTime(word.Line.StartTime, shift) ?? TimeSpan.Zero;
+            word.StartTime = ShiftTime(word.StartTime, shift);
+            word.PreviousWord?.EndTime = ShiftTime(word.PreviousWord.EndTime, shift);
+            return;
+        }
+
+        word.StartTime = ShiftTime(word.StartTime, shift);
+        word.PreviousWordInLine?.EndTime = ShiftTime(word.PreviousWordInLine.EndTime, shift);
     }
 
     [GeneratedRegex(@"(?<!\d)\.(?!\d)")]
     private static partial Regex DotNotBetweenNumbersRegex();
 
+    [GeneratedRegex(@" {2,}")]
+    private static partial Regex MultipleSpacesRegex();
+
+    [GeneratedRegex(@"[,?!();""“”„]")]
+    private static partial Regex PunctuationRegex();
+
+    [GeneratedRegex(@"[/\\]")]
+    private static partial Regex SlashRegex();
+
+    [GeneratedRegex(@"\[(?![0-9]{2}\:[0-9]{2}\.[0-9]{2}\])[^\]]*\]")]
+    private static partial Regex SquareBracketTextRegex();
+
     [GeneratedRegex(@"\[([0-9]{2})\:([0-9]{2})\.([0-9]{2})\](.*)")]
     private static partial Regex PatternLineRegex();
 
-    [GeneratedRegex(@"(.*?)\<([0-9]{2})\:([0-9]{2})\.([0-9]{2})\>")]
-    private static partial Regex PatternWordEndRegex();
+    [GeneratedRegex(@"\<([0-9]{2})\:([0-9]{2})\.([0-9]{2})\>")]
+    private static partial Regex WordTimeRegex();
 
-    [GeneratedRegex(@"^\<([0-9]{2})\:([0-9]{2})\.([0-9]{2})\>(.+)")]
-    private static partial Regex PatternWordStartRegex();
+    [GeneratedRegex(@"(?<!^)(?=-)")]
+    private static partial Regex HyphenSplitRegex();
 
-    private void ParseWordTimes(string word, LyricsLine lyricsLine, TimeSpan lineStartTime, int selectedWordIndex)
+    private void ApplyTimingCorrections()
     {
-        TimeSpan startTime = lineStartTime;
-        Regex regex = PatternWordStartRegex();
-        Match match = regex.Match(word);
-        string restOfWord = word;
-        if (match.Success)
+        foreach (LyricsLine line in LyricsLines.ToList())
         {
-            startTime = new TimeSpan(0, 0, int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value),
-                int.Parse(match.Groups[3].Value) * 10);
-            restOfWord = match.Groups[4].Value;
-        }
-        else if (lyricsLine.LastWord != null)
-        {
-            startTime = lyricsLine.LastWord.EndTime;
+            CloseShortGapsInsideLine(line);
+            SplitLineAtLargeGaps(line);
         }
 
-        regex = PatternWordEndRegex();
-        MatchCollection matches = regex.Matches(restOfWord);
-        if (matches.Count == 0)
+        foreach (LyricsLine line in LyricsLines.ToList())
         {
-            LyricsWord lyricsWord = new(lyricsLine);
-            lyricsLine.AddWord(lyricsWord);
+            MoveLineStartAfterOverlappingWord(line);
+            ApplyGapBeforeLine(line);
+        }
 
-            lyricsWord.StartTime = startTime;
-            lyricsWord.EndTime = TimeSpan.Zero;
-            lyricsWord.Word = restOfWord;
+        MergeShortLines();
+        UpdateLeadingEmptyLine(true);
+        AddTrailingEmptyLine();
+        NormalizeTimes();
+    }
 
-            lyricsWord.CheckProperTime();
+    private void ApplyChangedLineStart(LyricsLine line)
+    {
+        if (line.PreviousLine is {IsEmpty: true} emptyLine && line.StartTime - emptyLine.StartTime <= LargeGap)
+        {
+            RemoveEmptyLine(emptyLine);
+        }
 
-            if (WordCount == selectedWordIndex)
+        if (line.PreviousLine?.LastWord is { } previousLastWord && previousLastWord.EndTime > line.StartTime)
+        {
+            previousLastWord.EndTime = null;
+        }
+
+        ApplyGapBeforeLine(line);
+        UpdateLeadingEmptyLine(true);
+    }
+
+    private void ApplyChangedLineEnd(LyricsLine line)
+    {
+        if (line.LastWord is not {EndTime: { } endTime} lastWord || line.NextLine is not { } nextLine)
+        {
+            return;
+        }
+
+        if (!nextLine.IsEmpty)
+        {
+            if (endTime > nextLine.StartTime)
             {
-                SelectWord(lyricsWord);
+                lastWord.EndTime = null;
+                return;
             }
+
+            ApplyGapBeforeLine(nextLine);
+            return;
         }
-        else
+
+        nextLine.StartTime = endTime;
+        lastWord.EndTime = null;
+        if (nextLine.NextLine is {IsEmpty: false} followingLine &&
+            followingLine.StartTime - nextLine.StartTime <= LargeGap)
         {
-            foreach (Match match1 in matches)
+            RemoveEmptyLine(nextLine);
+            ApplyChangedLineEnd(line);
+        }
+    }
+
+    private void UpdateLeadingEmptyLine(bool isCorrectionAllowed)
+    {
+        if (FirstLine is not { } firstLine)
+        {
+            return;
+        }
+
+        if (isCorrectionAllowed && firstLine.IsEmpty && firstLine.StartTime == TimeSpan.Zero &&
+            firstLine.NextLine is {IsEmpty: false} nextLine && nextLine.StartTime <= LargeGap)
+        {
+            LyricsLines.Remove(firstLine);
+            firstLine = nextLine;
+        }
+
+        if (firstLine.IsEmpty)
+        {
+            return;
+        }
+
+        if (isCorrectionAllowed && firstLine.StartTime < MediumGap)
+        {
+            firstLine.StartTime = TimeSpan.Zero;
+        }
+        else if (firstLine.StartTime > LargeGap)
+        {
+            InsertEmptyLineBefore(firstLine, TimeSpan.Zero);
+        }
+    }
+
+    private void ParseWord(string word, LyricsLine lyricsLine, int selectedWordIndex)
+    {
+        List<(string Text, TimeSpan? StartTime, TimeSpan? EndTime)> timedParts = [];
+        TimeSpan? pendingStartTime = null;
+        int position = 0;
+
+        foreach (Match match in WordTimeRegex().Matches(word))
+        {
+            TimeSpan time = new(0, 0, int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value),
+                int.Parse(match.Groups[3].Value) * 10);
+            string text = word[position..match.Index];
+            position = match.Index + match.Length;
+
+            if (text.Length == 0)
             {
-                TimeSpan endTime = new(0, 0, int.Parse(match1.Groups[2].Value), int.Parse(match1.Groups[3].Value),
-                    int.Parse(match1.Groups[4].Value) * 10);
-                restOfWord = match1.Groups[1].Value;
+                pendingStartTime = time;
+                continue;
+            }
 
-                List<string> subWords = [.. restOfWord.Split('|')];
+            timedParts.Add((text, pendingStartTime, time));
+            pendingStartTime = null;
+        }
 
-                for (int i = 0; i < subWords.Count; i++)
+        if (position < word.Length)
+        {
+            timedParts.Add((word[position..], pendingStartTime, null));
+        }
+
+        List<LyricsWord> parsedWords = [];
+        foreach ((string text, TimeSpan? startTime, TimeSpan? endTime) in timedParts)
+        {
+            List<string> subWords =
+            [
+                .. text.Split('|').SelectMany(subWord => HyphenSplitRegex().Split(subWord))
+                    .Where(subWord => subWord.Length > 0)
+            ];
+            for (int i = 0; i < subWords.Count; i++)
+            {
+                LyricsWord lyricsWord = new(lyricsLine) {Word = subWords[i], IsPartOfWord = true};
+                lyricsLine.AddWord(lyricsWord);
+                lyricsWord.StartTime = i == 0 ? startTime : null;
+                lyricsWord.EndTime = i == subWords.Count - 1 ? endTime : null;
+                parsedWords.Add(lyricsWord);
+
+                if (WordCount == selectedWordIndex)
                 {
-                    string subWord = subWords[i];
-                    LyricsWord lyricsWord = new(lyricsLine);
-                    lyricsLine.AddWord(lyricsWord);
-
-                    lyricsWord.EndTime = endTime;
-                    lyricsWord.StartTime = startTime;
-                    startTime = lyricsWord.EndTime;
-
-                    if (string.IsNullOrWhiteSpace(restOfWord))
-                    {
-                        subWord = "";
-                    }
-
-                    lyricsWord.Word = subWord;
-                    if (match1 != matches[^1] || i < subWords.Count - 1)
-                    {
-                        lyricsWord.IsPartOfWord = true;
-                    }
-
-                    lyricsWord.CheckProperTime();
-
-                    if (WordCount == selectedWordIndex)
-                    {
-                        SelectWord(lyricsWord);
-                    }
+                    SelectWord(lyricsWord);
                 }
             }
+        }
+
+        if (parsedWords.Count > 0)
+        {
+            parsedWords[^1].IsPartOfWord = false;
         }
     }
 
@@ -669,61 +993,106 @@ public partial class Lyrics : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    private void RemoveEmptyWords()
+    private void ApplyGapBeforeLine(LyricsLine line)
     {
-        LyricsWord? word = FirstLine?.FirstWord;
-
-        if (word == null)
+        if (line.IsEmpty || line.PreviousLine is not {LastWord: {EndTime: { } previousEndTime} previousWord})
         {
             return;
         }
 
-        do
+        if (HasStaleEndTime(previousWord))
         {
-            if (string.IsNullOrWhiteSpace(word.Word) && word.Line.FirstWord != word.Line.LastWord)
+            previousWord.EndTime = null;
+            return;
+        }
+
+        if (line.StartTime - previousEndTime > LargeGap)
+        {
+            InsertEmptyLineBefore(line, previousEndTime);
+            previousWord.EndTime = null;
+        }
+        else
+        {
+            CloseShortGapBeforeLine(line);
+        }
+    }
+
+    private static void CloseShortGapBeforeLine(LyricsLine line)
+    {
+        if (line.IsEmpty || line.PreviousLine is not {LastWord: {EndTime: { } previousEndTime} previousWord})
+        {
+            return;
+        }
+
+        TimeSpan gap = line.StartTime - previousEndTime;
+        if (gap >= TimeSpan.Zero && gap < ShortGap)
+        {
+            previousWord.EndTime = null;
+        }
+    }
+
+    private void AddTrailingEmptyLine()
+    {
+        if (LastLine is not {IsEmpty: false} lastLine)
+        {
+            return;
+        }
+
+        LyricsLine newLine = new(this);
+        LyricsLines.Add(newLine);
+        newLine.StartTime = lastLine.LastWord?.EndTime ?? lastLine.StartTime;
+    }
+
+    private void InsertEmptyLineBefore(LyricsLine line, TimeSpan startTime)
+    {
+        LyricsLine newLine = new(this);
+        LyricsLines.Insert(LyricsLines.IndexOf(line), newLine);
+        newLine.StartTime = startTime;
+    }
+
+    private void NormalizeTimes()
+    {
+        foreach (LyricsLine line in LyricsLines)
+        {
+            for (int i = 0; i < line.Words.Count; i++)
             {
-                RemoveWord(word);
+                LyricsWord word = line.Words[i];
+                if (i == 0)
+                {
+                    if (word.StartTime == line.StartTime)
+                    {
+                        word.StartTime = null;
+                    }
+
+                    continue;
+                }
+
+                LyricsWord previousWord = line.Words[i - 1];
+                if (word.StartTime is { } startTime && previousWord.EndTime == null)
+                {
+                    previousWord.EndTime = startTime;
+                    word.StartTime = null;
+                }
+                else if (word.StartTime != null && word.StartTime == previousWord.EndTime)
+                {
+                    word.StartTime = null;
+                }
             }
 
-            word = word.NextWord;
-        } while (word != null);
+            if (line.LastWord is {EndTime: { } endTime} lastWord && line.NextLine?.StartTime == endTime)
+            {
+                lastWord.EndTime = null;
+            }
+        }
     }
 
-    private void InsertEmptyLineBeforeCurrent(TimeSpan timeSpan)
+    private void RemoveEmptyLine(LyricsLine emptyLine)
     {
-        if (_currentWord?.PreviousWord == null || _currentLine?.PreviousLine == null)
+        if (emptyLine.PreviousLine?.LastWord is {EndTime: null} previousWord)
         {
-            return;
+            previousWord.EndTime = emptyLine.StartTime;
         }
 
-        LyricsLine newLine = new(this);
-        LyricsLines.Insert(LyricsLines.IndexOf(_currentLine), newLine);
-        LyricsWord newWord = new(newLine) {Word = ""};
-        newLine.AddWord(newWord);
-        if (newWord.PreviousWord != null)
-        {
-            newWord.StartTime = newWord.PreviousWord.EndTime;
-        }
-
-        newWord.EndTime = timeSpan;
-    }
-
-    private void InsertEmptyLineAtBeginning(TimeSpan timeSpan)
-    {
-        LyricsLine newLine = new(this);
-        LyricsLines.Insert(0, newLine);
-        LyricsWord newWord = new(newLine) {Word = ""};
-
-        newLine.AddWord(newWord);
-        newWord.EndTime = timeSpan;
-    }
-
-    private void RemoveWord(LyricsWord word)
-    {
-        word.Line.RemoveWord(word);
-        if (word.Line.Words.Count == 0)
-        {
-            LyricsLines.Remove(word.Line);
-        }
+        LyricsLines.Remove(emptyLine);
     }
 }

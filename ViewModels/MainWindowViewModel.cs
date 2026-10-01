@@ -6,8 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using Do_Re_Mi_Lyrics.Helper;
 using Do_Re_Mi_Lyrics.Models;
 using Do_Re_Mi_Lyrics.Properties;
 using Do_Re_Mi_Lyrics.Views;
@@ -17,6 +20,10 @@ namespace Do_Re_Mi_Lyrics.ViewModels;
 
 public class MainWindowViewModel : INotifyPropertyChanged
 {
+    private const double LineRealignPadding = 0.25;
+    private const double PlayLeadBeforeWordSeconds = 1.5;
+    private const double RealignSeparationContext = 2.0;
+
     internal double LineHeight;
     internal double ScrollViewerHeight;
 
@@ -24,13 +31,17 @@ public class MainWindowViewModel : INotifyPropertyChanged
         _playTimer = new(DispatcherPriority.Send) {Interval = new TimeSpan(0, 0, 0, 0, 10)};
 
     private readonly List<Lyrics> _redoList = [];
+    private readonly Stopwatch _synchroStopwatch = new();
+    private readonly DispatcherTimer _synchroTimer = new() {Interval = TimeSpan.FromSeconds(1)};
     private readonly List<Lyrics> _undoList = [];
     private readonly Window _window;
+    private CancellationTokenSource? _synchroCancellation;
 
     public MainWindowViewModel(Window window)
     {
         _window = window;
         _playTimer.Tick += PlayTimerTick;
+        _synchroTimer.Tick += (_, _) => OnPropertyChanged(nameof(SynchroElapsedText));
         Global.Lyrics = new Lyrics();
         Global.Audio = new Audio();
         Global.MainWindowViewModel = this;
@@ -47,6 +58,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         if (Settings.Default.LyricsFilePath != "" && File.Exists(Settings.Default.LyricsFilePath))
         {
             LyricsFilePath = Settings.Default.LyricsFilePath;
+            IsLyricsInAudioFile = Settings.Default.IsLyricsInAudioFile;
             ParseLyricsFromFile();
         }
         else
@@ -69,6 +81,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public string PlayTempoText => $"Tempo: {PlayTempo:0.0}x";
     public string PlayVolumeText => $"Volume: {PlayVolume * 100:0}%";
+
+    public string SynchroElapsedText => _synchroStopwatch.Elapsed.ToString(@"m\:ss");
 
     public string TotalTimeText => Audio.TotalTime.ToString(@"mm\:ss");
 
@@ -113,6 +127,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsLyricsInAudioFile { get; private set; }
+
     public bool IsSaved
     {
         get;
@@ -122,6 +138,16 @@ public class MainWindowViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     } = true;
+
+    public bool IsSynchronizing
+    {
+        get;
+        private set
+        {
+            field = value;
+            OnPropertyChanged();
+        }
+    }
 
     public Lyrics Lyrics
     {
@@ -223,6 +249,16 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    public string SynchroStatusText
+    {
+        get;
+        private set
+        {
+            field = value;
+            OnPropertyChanged();
+        }
+    } = "";
+
     private bool IsLyricsFileLoaded => LyricsFilePath != "Open or paste lyrics";
 
     public void OpenAudioFile()
@@ -247,10 +283,11 @@ public class MainWindowViewModel : INotifyPropertyChanged
             Audio.OpenAudio();
             OnPropertyChanged(nameof(TotalTimeText));
             OnPropertyChanged(nameof(PlaySliderMaximum));
+            OpenLyricsFromAudioFile();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -275,16 +312,13 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 return;
             }
 
-            LyricsFilePath = ofd.FileName;
-            Settings.Default.LyricsFilePath = LyricsFilePath;
-            Settings.Default.LyricsFilesPath = Path.GetDirectoryName(LyricsFilePath);
-            Settings.Default.Save();
+            SetLyricsSource(ofd.FileName, false);
             _undoList.Clear();
             ParseLyricsFromFile();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
@@ -297,13 +331,21 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 return SaveLyricsToNewFile();
             }
 
-            string text = Lyrics.GetLyricsText(out _);
-            File.WriteAllText(LyricsFilePath, text, Encoding.UTF8);
+            string text = Lyrics.GetLyricsTextWithTimestamps(out _);
+            if (IsLyricsInAudioFile)
+            {
+                Audio.ReleaseFileWhile(LyricsFilePath, () => AudioFileLyrics.Write(LyricsFilePath, text));
+            }
+            else
+            {
+                File.WriteAllText(LyricsFilePath, text, Encoding.UTF8);
+            }
+
             IsSaved = true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
             return false;
         }
 
@@ -326,17 +368,39 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 return false;
             }
 
-            string text = Lyrics.GetLyricsText(out _);
+            string text = Lyrics.GetLyricsTextWithTimestamps(out _);
             File.WriteAllText(sfd.FileName, text, Encoding.UTF8);
-            LyricsFilePath = sfd.FileName;
-            Settings.Default.LyricsFilePath = LyricsFilePath;
-            Settings.Default.LyricsFilesPath = Path.GetDirectoryName(LyricsFilePath);
-            Settings.Default.Save();
+            SetLyricsSource(sfd.FileName, false);
             IsSaved = true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool SaveLyricsToAudioFile()
+    {
+        try
+        {
+            if (!IsAudioFileLoaded)
+            {
+                MessageBox.Show(_window, "Open an audio file first.", "Save lyrics to audio file");
+                return false;
+            }
+
+            string audioFilePath = AudioFilePath;
+            string text = Lyrics.GetLyricsTextWithTimestamps(out _);
+            Audio.ReleaseFileWhile(audioFilePath, () => AudioFileLyrics.Write(audioFilePath, text));
+            SetLyricsSource(audioFilePath, true);
+            IsSaved = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Show(ex);
             return false;
         }
 
@@ -382,7 +446,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
             return false;
         }
     }
@@ -397,7 +461,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         TimeSpan timeSpan = Lyrics.GetCurrentWordStartTime();
 
-        PlaySliderPosition = (long) (timeSpan - TimeSpan.FromSeconds(3 * PlayTempo)).TotalMilliseconds;
+        PlaySliderPosition =
+            (long) (timeSpan - TimeSpan.FromSeconds(PlayLeadBeforeWordSeconds * PlayTempo)).TotalMilliseconds;
         Audio.Play();
     }
 
@@ -410,6 +475,10 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         Lyrics.ParseLyrics("");
         LyricsFilePath = "Open or paste lyrics";
+        IsLyricsInAudioFile = false;
+        Settings.Default.LyricsFilePath = "";
+        Settings.Default.IsLyricsInAudioFile = false;
+        Settings.Default.Save();
         IsSaved = true;
     }
 
@@ -420,7 +489,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
             return;
         }
 
-        string text = Clipboard.GetText();
+        string text = Lyrics.CleanPastedText(Clipboard.GetText());
         Lyrics.ParseLyrics(text);
     }
 
@@ -430,36 +499,100 @@ public class MainWindowViewModel : INotifyPropertyChanged
         aboutWindow.ShowDialog();
     }
 
-    internal void ChangeButtonToPlay()
+    public async void AutomaticSynchro()
+    {
+        try
+        {
+            await RunPythonTaskAsync(SynchronizeAllLinesAsync);
+        }
+        catch (Exception e)
+        {
+            ErrorLog.Show(e);
+        }
+    }
+
+    public async void RealignCurrentLine()
+    {
+        try
+        {
+            if (IsSynchronizing || !IsAudioFileLoaded)
+            {
+                return;
+            }
+
+            if (Lyrics.CurrentLine is not {IsEmpty: false, LastWord: { } lastWord} line)
+            {
+                return;
+            }
+
+            double totalSeconds = Audio.TotalTime.TotalSeconds;
+            double lineEnd = (lastWord.EndTime ?? line.NextLine?.StartTime)?.TotalSeconds ?? totalSeconds;
+            if (lineEnd <= line.StartTime.TotalSeconds)
+            {
+                MessageBox.Show(_window, "Set the start of this line and of the next line first.",
+                    "Synchronization of the current line");
+                return;
+            }
+
+            WhisperLine block = WordsMatching.CreateLineBlock(line,
+                Math.Max(0, line.StartTime.TotalSeconds - LineRealignPadding),
+                Math.Min(totalSeconds, lineEnd + LineRealignPadding));
+            if (string.IsNullOrWhiteSpace(block.Text))
+            {
+                return;
+            }
+
+            await RunPythonTaskAsync((vocalsPath, cancellationToken) =>
+                RealignLineAsync(line, block, vocalsPath, cancellationToken));
+        }
+        catch (Exception e)
+        {
+            ErrorLog.Show(e);
+        }
+    }
+
+    public void CancelSynchro()
+    {
+        _synchroCancellation?.Cancel();
+    }
+
+    public void ChangeButtonToPlay()
     {
         PlayPauseText = "Play (Space)";
         PlayPauseIconPath = @"..\Images\play.png";
     }
 
-    internal void ChangeButtonToPause()
+    public void ChangeButtonToPause()
     {
         PlayPauseText = "Pause (Space)";
         PlayPauseIconPath = @"..\Images\pause.png";
     }
 
-    internal void StartTimer()
+    public void StartTimer()
     {
         _playTimer.Start();
     }
 
-    internal void StopTimer()
+    public void StopTimer()
     {
         OnPropertyChanged(nameof(CurrentTimeText));
         OnPropertyChanged(nameof(PlaySliderPosition));
         _playTimer.Stop();
     }
 
-    internal void ChangeEditMode()
+    public void RefreshPlayPosition()
+    {
+        OnPropertyChanged(nameof(CurrentTimeText));
+        OnPropertyChanged(nameof(PlaySliderPosition));
+        Lyrics.ChangePlayingWord();
+    }
+
+    public void ChangeEditMode()
     {
         IsEditMode = !IsEditMode;
         if (IsEditMode)
         {
-            LyricsText = Lyrics.GetLyricsText(out int caretIndex);
+            LyricsText = Lyrics.GetLyricsTextWithTimestamps(out int caretIndex);
             CaretIndex = caretIndex;
         }
         else
@@ -468,23 +601,26 @@ public class MainWindowViewModel : INotifyPropertyChanged
             Lyrics tempLyrics = new();
             tempLyrics.ParseLyrics(cutLyricsText, 0, true);
             int wordIndex = tempLyrics.WordCount;
-            if (!cutLyricsText.EndsWith(" "))
+            if (!cutLyricsText.EndsWith(' '))
             {
                 wordIndex--;
             }
 
+            HashSet<TimeSpan> uncertainLineStartTimes =
+                [.. Lyrics.LyricsLines.Where(line => line.IsUncertain).Select(line => line.StartTime)];
             Lyrics.ParseLyrics(LyricsText, wordIndex);
+            Lyrics.MarkUncertainLines(uncertainLineStartTimes);
+            if (Lyrics.ApplyTimingCorrectionsWithUndo())
+            {
+                IsSaved = false;
+            }
         }
     }
 
-    internal void AddToUndoList()
+    public void AddToUndoList()
     {
-        if (_undoList.Count > 0 && Lyrics.GetLyricsText(out int _) == _undoList[0].GetLyricsText(out int _))
-        {
-            return;
-        }
-
-        if (IsCalledByConstructor())
+        if (_undoList.Count > 0 && Lyrics.GetLyricsTextWithTimestamps(out int _) ==
+            _undoList[0].GetLyricsTextWithTimestamps(out int _))
         {
             return;
         }
@@ -501,7 +637,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsRedoEnabled));
     }
 
-    internal void Undo()
+    public void Undo()
     {
         if (_undoList.Count < 2)
         {
@@ -515,7 +651,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsRedoEnabled));
     }
 
-    internal void Redo()
+    public void Redo()
     {
         if (_redoList.Count < 1)
         {
@@ -529,7 +665,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsRedoEnabled));
     }
 
-    internal void CheckScrollView()
+    public void CheckScrollView()
     {
         try
         {
@@ -547,14 +683,150 @@ public class MainWindowViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            ErrorLog.Show(ex);
         }
     }
 
-    private static bool IsCalledByConstructor()
+    private static void DeleteTemporaryFile(string path)
     {
-        return new StackTrace().GetFrames().Select(stackFrame => stackFrame.GetMethod()).Any(method =>
-            method != null && method is {IsConstructor: true, DeclaringType.Name: nameof(MainWindowViewModel)});
+        try
+        {
+            File.Delete(path);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private async Task RunPythonTaskAsync(Func<string, CancellationToken, Task> runAsync)
+    {
+        if (IsSynchronizing || !IsAudioFileLoaded)
+        {
+            return;
+        }
+
+        if (IsEditMode)
+        {
+            ChangeEditMode();
+        }
+
+        bool isPythonEnvironmentReady = Whisper.IsPythonEnvironmentReady;
+
+        if (!isPythonEnvironmentReady && MessageBox.Show(_window,
+                "Automatic synchronization needs to download and install its components once " +
+                "(about 3 GB, it can take several minutes). Continue?", "Automatic synchronization",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        Audio.Pause();
+
+        using CancellationTokenSource cancellation = new();
+        _synchroCancellation = cancellation;
+        SynchroStatusText = "Starting...";
+        IsSynchronizing = true;
+        _synchroStopwatch.Restart();
+        _synchroTimer.Start();
+        OnPropertyChanged(nameof(SynchroElapsedText));
+        string vocalsPath = Path.Combine(Path.GetTempPath(), $"do-re-mi-vocals-{Guid.NewGuid():N}.wav");
+
+        try
+        {
+            if (!isPythonEnvironmentReady)
+            {
+                SynchroStatusText = "First run setup: Starting...";
+                await Whisper.PreparePythonEnvironmentAsync(
+                    new Progress<string>(x => SynchroStatusText = $"First run setup: {x}"), cancellation.Token);
+            }
+
+            await runAsync(vocalsPath, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception e)
+        {
+            ErrorLog.Show(e);
+        }
+        finally
+        {
+            Lyrics.CheckProperTimes();
+            DeleteTemporaryFile(vocalsPath);
+            _synchroTimer.Stop();
+            _synchroStopwatch.Stop();
+            _synchroCancellation = null;
+            IsSynchronizing = false;
+        }
+    }
+
+    private async Task SynchronizeAllLinesAsync(string vocalsPath, CancellationToken cancellationToken)
+    {
+        bool isMatched = false;
+
+        try
+        {
+            SynchroStatusText = "Stage 1/3: Starting...";
+            await Whisper.SeparateVocalsAsync(AudioFilePath, vocalsPath,
+                new Progress<string>(x => SynchroStatusText = $"Stage 1/3: {x}"), cancellationToken);
+
+            SynchroStatusText = "Stage 2/3: Starting...";
+            WhisperRoughResult roughResult = await Whisper.RunWhisperRoughAsync(vocalsPath,
+                new Progress<string>(x => SynchroStatusText = $"Stage 2/3: {x}"), cancellationToken);
+            AddToUndoList();
+            List<WhisperLine> alignBlocks = WordsMatching.MatchLyrics(roughResult.Words, Lyrics, roughResult.Duration);
+            isMatched = true;
+            IsSaved = false;
+
+            if (alignBlocks.Count > 0)
+            {
+                SynchroStatusText = "Stage 3/3: Starting...";
+                WhisperAlignResult alignResult = await Whisper.RunWhisperAlignAsync(vocalsPath, alignBlocks,
+                    new Progress<string>(x => SynchroStatusText = $"Stage 3/3: {x}"), cancellationToken);
+                WordsMatching.ApplyAlignResult(alignBlocks, alignResult);
+            }
+        }
+        finally
+        {
+            if (isMatched)
+            {
+                Lyrics.CloseShortGapsAndInsertEmptyLines();
+            }
+        }
+    }
+
+    private async Task RealignLineAsync(LyricsLine line, WhisperLine block, string vocalsPath,
+        CancellationToken cancellationToken)
+    {
+        double separationStart = Math.Max(0, block.Start - RealignSeparationContext);
+        double separationEnd = Math.Min(Audio.TotalTime.TotalSeconds, block.End + RealignSeparationContext);
+
+        SynchroStatusText = "Stage 1/2: Starting...";
+        await Whisper.SeparateVocalsAsync(AudioFilePath, vocalsPath, separationStart, separationEnd,
+            new Progress<string>(x => SynchroStatusText = $"Stage 1/2: {x}"), cancellationToken);
+
+        SynchroStatusText = "Stage 2/2: Starting...";
+        WhisperLine separatedBlock = new()
+        {
+            Text = block.Text, Start = block.Start - separationStart, End = block.End - separationStart
+        };
+        WhisperAlignResult alignResult = await Whisper.RunWhisperAlignAsync(vocalsPath, [separatedBlock],
+            new Progress<string>(x => SynchroStatusText = $"Stage 2/2: {x}"), cancellationToken);
+
+        foreach (WhisperWordDto word in alignResult.Words)
+        {
+            word.Start += separationStart;
+            word.End += separationStart;
+        }
+
+        AddToUndoList();
+        WordsMatching.ApplyAlignResult([block], alignResult);
+        line.IsUncertain = false;
+        Lyrics.ApplyRealignedLine(line);
+        IsSaved = false;
     }
 
 
@@ -572,8 +844,66 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     private void ParseLyricsFromFile()
     {
-        string text = File.ReadAllText(LyricsFilePath);
+        string text = IsLyricsInAudioFile ? AudioFileLyrics.Read(LyricsFilePath) : File.ReadAllText(LyricsFilePath);
         Lyrics.ParseLyrics(text);
-        IsSaved = true;
+        IsSaved = !Lyrics.ApplyTimingCorrectionsWithUndo();
+    }
+
+    private void OpenLyricsFromAudioFile()
+    {
+        string audioFilePath = AudioFilePath;
+        if (string.IsNullOrWhiteSpace(AudioFileLyrics.Read(audioFilePath)))
+        {
+            if (IsLyricsInAudioFile)
+            {
+                NewLyrics();
+                return;
+            }
+
+            if (Lyrics.WordCount == 0)
+            {
+                return;
+            }
+
+            NoLyricsInAudioWindowViewModel noLyricsInAudioViewModel = new();
+            NoLyricsInAudioWindow noLyricsInAudioWindow = new(noLyricsInAudioViewModel) {Owner = _window};
+            noLyricsInAudioWindow.ShowDialog();
+            switch (noLyricsInAudioViewModel.Choice)
+            {
+                case NoLyricsInAudioChoice.Clear:
+                    NewLyrics();
+                    break;
+                case NoLyricsInAudioChoice.Open:
+                    OpenLyricsFile();
+                    break;
+                case NoLyricsInAudioChoice.Keep:
+                    break;
+            }
+
+            return;
+        }
+
+        if (!CheckIfSaved())
+        {
+            return;
+        }
+
+        SetLyricsSource(audioFilePath, true);
+        _undoList.Clear();
+        ParseLyricsFromFile();
+    }
+
+    private void SetLyricsSource(string filePath, bool isLyricsInAudioFile)
+    {
+        LyricsFilePath = filePath;
+        IsLyricsInAudioFile = isLyricsInAudioFile;
+        Settings.Default.LyricsFilePath = filePath;
+        Settings.Default.IsLyricsInAudioFile = isLyricsInAudioFile;
+        if (!isLyricsInAudioFile)
+        {
+            Settings.Default.LyricsFilesPath = Path.GetDirectoryName(filePath);
+        }
+
+        Settings.Default.Save();
     }
 }

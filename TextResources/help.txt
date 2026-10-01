@@ -4,13 +4,25 @@
 </head>
 <body style="font-family: Calibri">
 	<p><b>How to begin?</b></p>
-	<p>Open audio file. Open the lyrics' file or paste lyrics' text from the clipboard. Start audio (Space) and use F6 to set time at the start of every word. Red time means that it's earlier than the previous one and it should be corrected.</p>
+	<p>Open an audio file (FLAC, MP3 or WAV). Open a lyrics file (LRC or TXT) or paste the lyrics' text from the clipboard. Start audio (Space) and use F6 to set time at the start of every word. Lyrics are always converted to lowercase.</p>
+	<p><b>Colors</b></p>
+	<p>
+		<b>Red time</b> - it's earlier than the previous one and it should be corrected<br />
+		<b>Light orange line</b> - the automatic synchronization may be inaccurate, check it (the mark disappears after changing a time in this line)<br />
+	</p>
+	<p><b>Pasting lyrics</b></p>
+	<p>Text pasted from the clipboard (Ctrl+V) is cleaned up: punctuation and other special characters, text in square brackets (e.g. [Chorus]) and empty lines are removed and numbers are written as words (1990 - nineteen ninety). Timestamps of already synchronized lyrics are kept.</p>
+	<p><b>Automatic synchronization (F11)</b></p>
+	<p>Open the audio file and the lyrics, then press F11. The program separates the vocals from the music, recognizes the sung words and sets the times of your lyrics' words. The text of your lyrics is never changed. It works for English songs and takes about a minute and a half for a song. On the first use it downloads its components (about 3 GB, an internet connection is needed), which takes a few more minutes. Esc cancels the synchronization. Lines that may be inaccurate are highlighted in light orange. Ctrl+Z restores the lyrics from before the synchronization.</p>
+	<p>Ctrl+F11 (or the synchronization button with Ctrl held) synchronizes only the line with the highlighted word, between its start and the start of the next line (or the end of its last word, if it has one), 0.25 s wider on both sides. Correct the line edges first (F6 on its first word and on the first word of the next line) and let the program set the words inside. Ctrl+Z restores the line from before it.</p>
 	<p><b>How to split a word into parts?</b></p>
 	<p>Sometimes one syllable in a word is being sung several times longer than the rest. Then the word can be split into two or more parts. Enter edit mode (F12), write vertical bar character | in the place where you want to split and leave the edit mode (F12). Now you can set the time for every part of the word separately.</p>
+	<p><b>Errors</b></p>
+	<p>Errors are written with details to %LOCALAPPDATA%\Do-Re-Mi Lyrics\Logs\errors.log (attach it when reporting a bug). The folder can be opened with the Open log folder button below.</p>
 	<p><b>Mouse shortcuts</b></p>
 	<p>
 		<b>Left Mouse Button</b> - Highlight word<br />
-		<b>Double Left Mouse Button</b> - Change playing time to the current word minus 3 seconds<br />
+		<b>Double Left Mouse Button</b> - Change playing time to the current word minus 1.5 seconds (at the current tempo)<br />
 	</p>
 	<p><b>Keyboard shortcuts</b></p>
 	<p>
@@ -21,9 +33,13 @@
 		<b>F5</b> - Set time at the end of the previous word (if there's a longer gap between two words/lines)<br />
 		<b>F6</b> - Set time at the beginning of the highlighted word<br />
 		<b>F8</b> - Removes time from the previous word<br />
+		<b>F11</b> - Automatic synchronization<br />
+		<b>Ctrl+F11</b> - Automatic synchronization of the current line only<br />
 		<b>F12</b> - Edit text of the lyrics<br />
+		<b>Esc</b> - Cancel the automatic synchronization<br />
 		<b>Ctrl+S</b> - Save lyrics file<br />
 		<b>Ctrl+Shift+S</b> - Save lyrics to a new file<br />
+		<b>Ctrl+Shift+A</b> - Save lyrics inside the audio file (its modification date stays unchanged)<br />
 		<b>Ctrl+V</b> - Paste lyrics text from the clipboard<br />
 		<b>Ctrl+Y, Ctrl+Shift+Z</b> - Redo<br />
 		<b>Ctrl+Z</b> - Undo<br />
@@ -35,13 +51,13 @@
 		<b>Ctrl+Plus</b> - Increase time of all words starting from current by 0.2 seconds<br />
 		<b>Minus</b> - Decrease time of the current word by 0.2 seconds<br />
 		<b>Plus</b> - Increase time of the current word by 0.2 seconds<br />
-		<b>Ctrl+Enter</b> - Change playing time to the current word minus 3 seconds<br />
-		<b>Enter</b> - Move the current word to the next line<br />
+		<b>Ctrl+Enter</b> - Change playing time to the current word minus 1.5 seconds (at the current tempo)<br />
+		<b>Enter</b> - Move the current word and the rest of the line to a new line<br />
 		<b>Backspace</b> - Move the current line to the previous one (works only when the first word in line is highlighted)<br />
 		<b>Delete</b> - Move the next line to the end of current one (works only when the last word in line is highlighted)<br />
 		<b>Space</b> - Play/Pause<br />
-		<b>Ctrl+Left</b> - Rewind 5 seconds<br />
-		<b>Ctrl+Right</b> - Fast forward 5 seconds<br />
+		<b>Ctrl+Left</b> - Rewind 1 second (at the current tempo)<br />
+		<b>Ctrl+Right</b> - Fast forward 1 second (at the current tempo)<br />
 		<b>Ctrl+Up</b> - Increase tempo by 0.1<br />
 		<b>Ctrl+Down</b> - Decrease tempo by 0.1<br />
 		<b>Shift+Up</b> - Increase volume by 10%<br />
@@ -55,8 +71,10 @@
 				<a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from
 				<a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
 			</li>
+			<li>Audio playback: <a href="https://github.com/naudio/NAudio">NAudio</a> and <a href="https://github.com/owoudenberg/soundtouch.net">SoundTouch.Net</a> (LGPL 2.1 or later)</li>
+			<li>Automatic synchronization: <a href="https://www.python.org">Python</a> (included) and <a href="https://github.com/m-bain/whisperX">WhisperX</a>, <a href="https://github.com/SYSTRAN/faster-whisper">faster-whisper</a>, <a href="https://github.com/facebookresearch/demucs">Demucs</a>, <a href="https://pytorch.org">PyTorch</a> (downloaded on the first use), each under its own license</li>
+			<li><a href="https://ffmpeg.org">FFmpeg</a> 7.1.1 libraries (GPL 3, build from <a href="https://www.gyan.dev/ffmpeg/builds/">www.gyan.dev</a>, where the source code is available)</li>
 		</ul>
 	</p>
 </body>
 </html>
-

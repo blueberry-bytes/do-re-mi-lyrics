@@ -4,6 +4,29 @@
 	</head>
 	<body style="font-family: Calibri">
 		<p>
+			<b>v1.3.0 - 2026-10-01</b>
+			<ul>
+				<li>- added automatic synchronization (F11) of English songs, based on WhisperX speech recognition and Demucs vocal separation</li>
+				<li>- automatic synchronization downloads its components (about 3 GB) once, on the first use</li>
+				<li>- automatic synchronization of the current line only (Ctrl+F11 or the synchronization button with Ctrl held), after correcting the line edges by hand</li>
+				<li>- progress window during automatic synchronization, which can be cancelled with Esc</li>
+				<li>- lines that may be inaccurate after automatic synchronization are highlighted in light orange</li>
+				<li>- after automatic synchronization, gaps shorter than 0.5 seconds between words are closed, lines are split at gaps longer than 1.5 seconds, empty lines are inserted into gaps longer than 1.5 seconds and a line shown for less than 1.5 seconds is joined with the next one (also after opening a file and after leaving the edit mode)</li>
+				<li>- removed the yellow line time (lines that are too short are now joined automatically)</li>
+				<li>- pasted lyrics are cleaned up: punctuation and other special characters, text in square brackets and empty lines are removed and numbers are written as words</li>
+				<li>- lyrics can be saved inside the audio file (Ctrl+Shift+A) without changing its modification date; Save then updates the audio file and lyrics saved inside an opened audio file are loaded automatically</li>
+				<li>- every line has its own start time and word times are optional: pasted lyrics have no word times, a word starting right after the previous one has no start tag, the last word of a line has no end tag and empty lines contain only the line time</li>
+				<li>- F5 shortens the previous word and the current word keeps its start; F6 keeps a gap marked with F5 only if it is at least 0.5 seconds long and moves the rest of the line to a new line if it is longer than 1.5 seconds</li>
+				<li>- when the last word of a line ends after the next line starts and the first word of the next line ends even later, the next line starts with the end of that word (after automatic synchronization and after opening a file)</li>
+				<li>- timing corrections (closing short gaps, empty lines in long gaps) are also applied when a file is opened and after leaving the edit mode (F12); they can be undone and the lyrics are marked as unsaved</li>
+				<li>- leaving the edit mode (F12) keeps the light orange highlight of uncertain lines</li>
+				<li>- an empty line at the beginning is added only when the lyrics start later than 1.5 seconds (the same gap as between lines) and removed when they start earlier; lyrics starting within the first second start at 0</li>
+				<li>- fixed Ctrl+Left/Ctrl+Right jumping to the start/end of the song; they now skip 1 second (at the current tempo)</li>
+				<li>- words with a hyphen are split into separately timed parts before the hyphen (well-known → well + -known)</li>
+				<li>- navigation skips empty lines; Backspace/Delete next to an empty line removes it</li>
+				<li>- errors are written with details to %LOCALAPPDATA%\Do-Re-Mi Lyrics\Logs\errors.log; the folder can be opened from the About window (F1)</li>
+				<li>- uninstaller removes all files, including the downloaded components</li>
+			</ul>
 			<b>v1.2.1 - 2026-09-25</b>
 			<ul>
 				<li>- fixed a few more bugs</li>

@@ -32,7 +32,7 @@ Section
     CreateShortcut "$SMPROGRAMS\Do-Re-Mi Lyrics.lnk" "$INSTDIR\Do-Re-Mi Lyrics.exe"
     CreateShortcut "$SMPROGRAMS\Do-Re-Mi Lyrics Uninstall.lnk" "$INSTDIR\uninstall.exe"
 
-    File /r "..\bin\Release\net6.0-windows7.0\*"
+    File /r "..\bin\Release\net10.0-windows\*"
 
 SectionEnd
  
@@ -44,7 +44,12 @@ Section "uninstall"
     Delete "$INSTDIR\*"
     Delete "$INSTDIR\ref\*"
     RMDir "$INSTDIR\ref"
+    RMDir /r "$INSTDIR\Python"
+    RMDir /r "$INSTDIR\ffmpeg"
     RMDir $INSTDIR
+
+    SetShellVarContext current
+    RMDir /r "$LOCALAPPDATA\Do-Re-Mi Lyrics"
 
 SectionEnd
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -6,15 +6,22 @@ namespace Do_Re_Mi_Lyrics.Models;
 
 public class LyricsWord(LyricsLine line) : INotifyPropertyChanged
 {
+    private const long TimePrecisionTicks = TimeSpan.TicksPerMillisecond * 10;
+
     internal LyricsLine Line = line;
-    private bool _isPartOfWord;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public string EndTimeText => EndTime.ToString(@"\<mm\:ss\.ff\>");
+
+    public string EndTimeText =>
+        EndTime is { } endTime && !(NextWordInLine == null && Line.NextLine?.StartTime == endTime)
+            ? FormatTime(endTime)
+            : "";
 
     public string StartTimeText =>
-        (PreviousWord == null || StartTime != PreviousWord.EndTime) && Line.FirstWord != this
-            ? StartTime.ToString(@"\<mm\:ss\.ff\>")
+        StartTime is { } startTime && startTime != (PreviousWordInLine is { } previousWord
+            ? previousWord.EndTime
+            : Line.StartTime)
+            ? FormatTime(startTime)
             : "";
 
     public bool IsNotProperTime
@@ -29,10 +36,10 @@ public class LyricsWord(LyricsLine line) : INotifyPropertyChanged
 
     public bool IsPartOfWord
     {
-        get => _isPartOfWord;
+        get;
         set
         {
-            _isPartOfWord = value;
+            field = value;
             OnPropertyChanged();
         }
     }
@@ -67,57 +74,101 @@ public class LyricsWord(LyricsLine line) : INotifyPropertyChanged
         }
     } = "";
 
-    internal LyricsWord? NextWord =>
-        Line.LastWord == this || Line.LastWord == null || Line.Words.IndexOf(this) == -1
-            ? Line.NextLine?.FirstWord
-            : Line.Words[Line.Words.IndexOf(this) + 1];
+    internal TimeSpan? EffectiveEndTime =>
+        EndTime ?? (NextWordInLine is { } nextWord ? nextWord.StartTime : Line.NextLine?.StartTime);
 
-    internal LyricsWord? PreviousWord =>
-        Line.FirstWord == this || Line.FirstWord == null || Line.Words.IndexOf(this) == -1
-            ? Line.PreviousLine?.LastWord
-            : Line.Words[Line.Words.IndexOf(this) - 1];
+    internal TimeSpan? EffectiveStartTime =>
+        StartTime ?? (PreviousWordInLine is { } previousWord ? previousWord.EndTime : Line.StartTime);
 
-    internal TimeSpan EndTime
+    internal bool IsFirstInLine => Line.FirstWord == this;
+
+    internal LyricsWord? NextWord
     {
-        get;
-        set
+        get
         {
-            field = value;
-            CheckProperTime();
-            NextWord?.CheckProperTime();
-            OnPropertyChanged(nameof(EndTimeText));
+            if (NextWordInLine is { } nextWord)
+            {
+                return nextWord;
+            }
+
+            for (LyricsLine? nextLine = Line.NextLine; nextLine != null; nextLine = nextLine.NextLine)
+            {
+                if (nextLine.FirstWord is { } firstWord)
+                {
+                    return firstWord;
+                }
+            }
+
+            return null;
         }
     }
 
-    internal TimeSpan StartTime
+    internal LyricsWord? NextWordInLine
+    {
+        get
+        {
+            int index = Line.Words.IndexOf(this);
+            return index >= 0 && index < Line.Words.Count - 1 ? Line.Words[index + 1] : null;
+        }
+    }
+
+    internal LyricsWord? PreviousWord
+    {
+        get
+        {
+            if (PreviousWordInLine is { } previousWord)
+            {
+                return previousWord;
+            }
+
+            for (LyricsLine? previousLine = Line.PreviousLine;
+                 previousLine != null;
+                 previousLine = previousLine.PreviousLine)
+            {
+                if (previousLine.LastWord is { } lastWord)
+                {
+                    return lastWord;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    internal LyricsWord? PreviousWordInLine
+    {
+        get
+        {
+            int index = Line.Words.IndexOf(this);
+            return index > 0 ? Line.Words[index - 1] : null;
+        }
+    }
+
+    internal TimeSpan? EndTime
     {
         get;
         set
         {
-            field = value;
-            CheckProperTime();
-            NextWord?.CheckProperTime();
-            if (this == Line.FirstWord)
-            {
-                Line.UpdateStartTimeText();
-            }
-            else
-            {
-                OnPropertyChanged(nameof(StartTimeText));
-            }
+            field = RoundTime(value);
+            Line.RefreshTimesAround();
+        }
+    }
+
+    internal TimeSpan? StartTime
+    {
+        get;
+        set
+        {
+            field = RoundTime(value);
+            Line.RefreshTimesAround();
         }
     }
 
     public override string ToString()
     {
-        string text = "";
-        if (Line.FirstWord != this && (PreviousWord == null || StartTime != PreviousWord.EndTime))
-        {
-            text = StartTimeText;
-        }
-
-        text += $"{Word}{EndTimeText}{(_isPartOfWord ? "" : " ")}";
-        return text;
+        string separator = !IsPartOfWord ? " " :
+            EndTimeText == "" && NextWordInLine?.Word.StartsWith('-') != true ? "|" : "";
+        return $"{StartTimeText}{Word}{EndTimeText}{separator}";
     }
 
     public LyricsWord Clone(LyricsLine lyricsLine)
@@ -135,17 +186,28 @@ public class LyricsWord(LyricsLine line) : INotifyPropertyChanged
         return lyricsWord;
     }
 
+    internal static TimeSpan? RoundTime(TimeSpan? time)
+    {
+        return time is { } value ? new TimeSpan(Math.Max(0, value.Ticks - value.Ticks % TimePrecisionTicks)) : null;
+    }
+
     internal void CheckProperTime()
     {
-        IsNotProperTime = EndTime < Line.StartTime || EndTime < PreviousWord?.EndTime;
-        Line.CheckProperTime();
+        TimeSpan? startTime = EffectiveStartTime;
+        IsNotProperTime = EffectiveEndTime < startTime || startTime < PreviousWord?.EffectiveEndTime;
     }
 
-    internal void UpdateStartTimeText()
+    internal void RefreshTimes()
     {
         OnPropertyChanged(nameof(StartTimeText));
+        OnPropertyChanged(nameof(EndTimeText));
+        CheckProperTime();
     }
 
+    private static string FormatTime(TimeSpan time)
+    {
+        return time.ToString(@"\<mm\:ss\.ff\>");
+    }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

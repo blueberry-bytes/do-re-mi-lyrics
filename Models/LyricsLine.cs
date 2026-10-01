@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -10,11 +10,9 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public TimeSpan StartTime => FirstWord?.StartTime ?? PreviousLine?.LastWord?.EndTime ?? TimeSpan.Zero;
+    public string LineText => Words.Aggregate("", (current, word) => $"{current}{word.Word} ");
 
     public string StartTimeText => StartTime.ToString(@"\[mm\:ss\.ff\]");
-
-    public string Text => Words.Aggregate("", (current, word) => $"{current}{word.Word} ");
 
     public bool IsNotProperTime
     {
@@ -26,13 +24,24 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
         }
     }
 
-    public bool IsTooShortTime
+
+    public bool IsUncertain
     {
         get;
         set
         {
             field = value;
             OnPropertyChanged();
+        }
+    }
+
+    public TimeSpan StartTime
+    {
+        get;
+        set
+        {
+            field = LyricsWord.RoundTime(value) ?? TimeSpan.Zero;
+            RefreshTimesAround();
         }
     }
 
@@ -47,6 +56,7 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
     } = [];
 
     internal LyricsWord? FirstWord => Words.Count > 0 ? Words[0] : null;
+    internal bool IsEmpty => Words.Count == 0;
     internal LyricsWord? LastWord => Words.Count > 0 ? Words[^1] : null;
 
     internal LyricsLine? NextLine =>
@@ -78,43 +88,55 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
 
     internal void CheckProperTime()
     {
-        IsNotProperTime = StartTime - PreviousLine?.LastWord?.EndTime < TimeSpan.Zero;
-        IsTooShortTime = !string.IsNullOrWhiteSpace(FirstWord?.Word) &&
-                         StartTime - PreviousLine?.StartTime < TimeSpan.FromSeconds(1.5) &&
-                         lyrics.FirstLine?.NextLine != this;
+        IsNotProperTime = StartTime < PreviousLine?.StartTime || StartTime < PreviousLine?.LastWord?.EndTime;
     }
 
     internal void AddWord(LyricsWord word)
     {
         Words.Add(word);
-        UpdateStartTimeText();
+        RefreshTimesAround();
     }
 
     internal void InsertWord(int index, LyricsWord word)
     {
         Words.Insert(index, word);
-        UpdateStartTimeText();
+        RefreshTimesAround();
     }
 
     internal void RemoveWord(LyricsWord word)
     {
         Words.Remove(word);
-        UpdateStartTimeText();
+        RefreshTimesAround();
     }
 
-    internal void UpdateStartTimeText()
+    internal void RefreshTimes()
     {
         OnPropertyChanged(nameof(StartTimeText));
+        CheckProperTime();
+        foreach (LyricsWord word in Words)
+        {
+            word.RefreshTimes();
+        }
+    }
+
+    internal void RefreshTimesAround()
+    {
+        PreviousLine?.RefreshTimes();
+        RefreshTimes();
+        NextLine?.RefreshTimes();
     }
 
     internal LyricsLine Clone(Lyrics lyricsToClone)
     {
-        LyricsLine lyricsLine = new(lyricsToClone) {IsNotProperTime = IsNotProperTime, IsTooShortTime = IsTooShortTime};
+        LyricsLine lyricsLine = new(lyricsToClone)
+        {
+            StartTime = StartTime,
+            IsNotProperTime = IsNotProperTime,
+            IsUncertain = IsUncertain
+        };
         foreach (LyricsWord lyricsWord in Words)
         {
-            LyricsWord newLyricsWord = lyricsWord.Clone(lyricsLine);
-            lyricsLine.Words.Add(newLyricsWord);
-            newLyricsWord.CheckProperTime();
+            lyricsLine.Words.Add(lyricsWord.Clone(lyricsLine));
         }
 
         return lyricsLine;
