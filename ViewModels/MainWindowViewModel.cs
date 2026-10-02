@@ -265,6 +265,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             OpenFileDialog ofd = new()
             {
                 Filter = "Audio (*.flac,*.mp3,*.wav)|*.flac;*.mp3;*.wav",
@@ -295,6 +296,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             if (!CheckIfSaved())
             {
                 return;
@@ -326,6 +328,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             if (!IsLyricsFileLoaded)
             {
                 return SaveLyricsToNewFile();
@@ -356,6 +359,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             SaveFileDialog sfd = new()
             {
                 Filter = "Lyrics (*.lrc)|*.lrc",
@@ -386,6 +390,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             if (!IsAudioFileLoaded)
             {
                 MessageBox.Show(_window, "Open an audio file first.", "Save lyrics to audio file");
@@ -430,6 +435,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     {
         try
         {
+            ExitEditMode();
             if (IsSaved)
             {
                 return true;
@@ -587,6 +593,14 @@ public class MainWindowViewModel : INotifyPropertyChanged
         Lyrics.ChangePlayingWord();
     }
 
+    public void ExitEditMode()
+    {
+        if (IsEditMode)
+        {
+            ChangeEditMode();
+        }
+    }
+
     public void ChangeEditMode()
     {
         IsEditMode = !IsEditMode;
@@ -606,10 +620,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
                 wordIndex--;
             }
 
-            HashSet<TimeSpan> uncertainLineStartTimes =
-                [.. Lyrics.LyricsLines.Where(line => line.IsUncertain).Select(line => line.StartTime)];
             Lyrics.ParseLyrics(LyricsText, wordIndex);
-            Lyrics.MarkUncertainLines(uncertainLineStartTimes);
             if (Lyrics.ApplyTimingCorrectionsWithUndo())
             {
                 IsSaved = false;
@@ -708,10 +719,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
             return;
         }
 
-        if (IsEditMode)
-        {
-            ChangeEditMode();
-        }
+        ExitEditMode();
 
         bool isPythonEnvironmentReady = Whisper.IsPythonEnvironmentReady;
 
@@ -824,7 +832,6 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
         AddToUndoList();
         WordsMatching.ApplyAlignResult([block], alignResult);
-        line.IsUncertain = false;
         Lyrics.ApplyRealignedLine(line);
         IsSaved = false;
     }

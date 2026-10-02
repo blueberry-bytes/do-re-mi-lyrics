@@ -38,7 +38,6 @@ Automatic synchronization (F11):
 * on the first use it downloads its components (about 3 GB, an internet connection is needed), which takes a few more
   minutes; they are stored in `%LOCALAPPDATA%\Do-Re-Mi Lyrics` and removed by the uninstaller
 * Esc cancels the synchronization, Ctrl+Z restores the lyrics from before it
-* lines that may be inaccurate are highlighted in light orange, the mark disappears after changing a time in the line
 * Ctrl+F11 (or the synchronization button with Ctrl held) synchronizes only the line with the highlighted word, between
   its start and the start of the next line (or the end of its last word, if it has one), 0.25 s wider on both sides;
   correct the line edges first (F6 on its first word and on the first word of the next line) and let the program set

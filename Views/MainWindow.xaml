@@ -55,17 +55,6 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="LyricsLinePanel" TargetType="DockPanel">
-            <d:Style.DataContext>
-                <x:Type Type="models:LyricsLine" />
-            </d:Style.DataContext>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsUncertain}" Value="true">
-                    <Setter Property="Background" Value="#FFFFE4C4" />
-                    <Setter Property="ToolTip" Value="Automatic synchronization may be inaccurate" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
         <Style x:Key="WordStartTime" TargetType="TextBlock">
             <d:Style.DataContext>
                 <x:Type Type="models:LyricsWord" />
@@ -174,12 +163,12 @@
             <Button IsEnabled="{Binding IsRedoEnabled}" Click="RedoClick" ToolTip="Redo (Ctrl+Y, Ctrl+Shift+Z)">
                 <Image Source="..\Images\redo.png" />
             </Button>
-            <Button Click="EditClick" ToolTip="Edit mode on/off (F12)">
-                <Image Source="..\Images\edit.png" />
-            </Button>
             <Button Click="AutomaticSynchroClick"
                     ToolTip="Automatic synchronization (F11), with Ctrl only the current line (Ctrl+F11)">
                 <Image Source="..\Images\synchro.png" />
+            </Button>
+            <Button Click="EditClick" ToolTip="Edit mode on/off (F12)">
+                <Image Source="..\Images\edit.png" />
             </Button>
             <Button Click="HelpClick" ToolTip="Help (F1)">
                 <Image Source="..\Images\info.png" />
@@ -201,7 +190,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <DockPanel Style="{StaticResource LyricsLinePanel}">
+                                <DockPanel>
                                     <TextBlock Text="{Binding StartTimeText}" Style="{StaticResource LineTime}"
                                                DockPanel.Dock="Left" />
                                     <TextBlock Text=" " Width="0" Style="{StaticResource Word}"

@@ -182,7 +182,6 @@ public partial class Lyrics : INotifyPropertyChanged
                 return;
             }
 
-            word.Line.IsUncertain = false;
             word.PreviousWord?.EndTime = null;
             word.StartTime = null;
             if (word.IsFirstInLine)
@@ -208,7 +207,6 @@ public partial class Lyrics : INotifyPropertyChanged
             }
 
             Global.MainWindowViewModel.AddToUndoList();
-            word.Line.IsUncertain = false;
             TimeSpan currentTime = Global.Audio.CurrentTime;
 
             if (word.IsFirstInLine)
@@ -260,7 +258,6 @@ public partial class Lyrics : INotifyPropertyChanged
             }
 
             Global.MainWindowViewModel.AddToUndoList();
-            word.Line.IsUncertain = false;
             TimeSpan currentTime = Global.Audio.CurrentTime;
 
             if (word.EndTime <= currentTime)
@@ -572,7 +569,6 @@ public partial class Lyrics : INotifyPropertyChanged
         }
 
         Global.MainWindowViewModel.AddToUndoList();
-        CurrentLine?.IsUncertain = false;
         ShiftStartOfWord(_currentWord, TimeSpan.FromSeconds(seconds));
         Global.MainWindowViewModel.IsSaved = false;
     }
@@ -585,7 +581,6 @@ public partial class Lyrics : INotifyPropertyChanged
         }
 
         Global.MainWindowViewModel.AddToUndoList();
-        CurrentLine?.IsUncertain = false;
         TimeSpan shift = TimeSpan.FromSeconds(seconds);
         LyricsLine currentLine = currentWord.Line;
 
@@ -633,14 +628,6 @@ public partial class Lyrics : INotifyPropertyChanged
         }
     }
 
-    internal void MarkUncertainLines(IReadOnlySet<TimeSpan> lineStartTimes)
-    {
-        foreach (LyricsLine line in LyricsLines.Where(line => !line.IsEmpty && lineStartTimes.Contains(line.StartTime)))
-        {
-            line.IsUncertain = true;
-        }
-    }
-
     internal bool ApplyTimingCorrectionsWithUndo()
     {
         Lyrics correctedLyrics = Clone();
@@ -682,7 +669,6 @@ public partial class Lyrics : INotifyPropertyChanged
             firstWord.StartTime ??= nextLine.StartTime;
         }
 
-        line.IsUncertain |= nextLine.IsUncertain;
         foreach (LyricsWord movedWord in nextLine.Words.ToList())
         {
             nextLine.RemoveWord(movedWord);
@@ -711,7 +697,7 @@ public partial class Lyrics : INotifyPropertyChanged
     {
         LyricsLine line = word.Line;
         TimeSpan newLineStartTime = word.EffectiveStartTime ?? TimeSpan.Zero;
-        LyricsLine newLine = new(this) {IsUncertain = line.IsUncertain};
+        LyricsLine newLine = new(this);
         LyricsLines.Insert(LyricsLines.IndexOf(line) + 1, newLine);
         newLine.StartTime = newLineStartTime;
 
@@ -819,7 +805,7 @@ public partial class Lyrics : INotifyPropertyChanged
     [GeneratedRegex(@" {2,}")]
     private static partial Regex MultipleSpacesRegex();
 
-    [GeneratedRegex(@"[,?!();""“”„]")]
+    [GeneratedRegex(@"[,?!¿¡();""“”„]|:(?![0-9]{2}\.[0-9]{2}[\]>])")]
     private static partial Regex PunctuationRegex();
 
     [GeneratedRegex(@"[/\\]")]

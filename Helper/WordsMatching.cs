@@ -18,16 +18,10 @@ public static class WordsMatching
     private const int SimilarWordScore = 1;
     private const double SimilarWordThreshold = 0.5;
     private const double StartOffset = 0.15;
-    private const double UncertainTimingDisagreement = 0.3;
 
     public static List<WhisperLine> MatchLyrics(IReadOnlyList<WhisperWordDto> roughWords, Lyrics lyrics,
         double duration)
     {
-        foreach (LyricsLine lyricsLine in lyrics.LyricsLines)
-        {
-            lyricsLine.IsUncertain = false;
-        }
-
         List<LineWords> lines =
         [
             .. lyrics.LyricsLines.Select(x => new LineWords(x)).Where(x => x.Words.Count > 0)
@@ -81,9 +75,6 @@ public static class WordsMatching
             {
                 int count = line.Words.Count;
                 ApplyTimings(line, timings[offset..(offset + count)]);
-                line.Line.IsUncertain = isAlignLost || !block.HasPreviousTimings ||
-                                        HasTimingDisagreement(aligned[offset..(offset + count)],
-                                            block.PreviousTimings[offset..(offset + count)]);
                 offset += count;
             }
         }
@@ -237,12 +228,6 @@ public static class WordsMatching
                 ? new WordTiming(words[i].Start + StartOffset, words[i].End + StartOffset)
                 : (WordTiming?) null)
         ];
-    }
-
-    private static bool HasTimingDisagreement(WordTiming?[] aligned, WordTiming[] previous)
-    {
-        return aligned.Where((timing, i) =>
-            timing is { } current && Math.Abs(current.Start - previous[i].Start) > UncertainTimingDisagreement).Any();
     }
 
     private static WordTiming[] FillMissingTimings(WordTiming?[] timings, double from, double to)

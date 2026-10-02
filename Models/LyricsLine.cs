@@ -24,17 +24,6 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
         }
     }
 
-
-    public bool IsUncertain
-    {
-        get;
-        set
-        {
-            field = value;
-            OnPropertyChanged();
-        }
-    }
-
     public TimeSpan StartTime
     {
         get;
@@ -128,12 +117,7 @@ public class LyricsLine(Lyrics lyrics) : INotifyPropertyChanged
 
     internal LyricsLine Clone(Lyrics lyricsToClone)
     {
-        LyricsLine lyricsLine = new(lyricsToClone)
-        {
-            StartTime = StartTime,
-            IsNotProperTime = IsNotProperTime,
-            IsUncertain = IsUncertain
-        };
+        LyricsLine lyricsLine = new(lyricsToClone) {StartTime = StartTime, IsNotProperTime = IsNotProperTime};
         foreach (LyricsWord lyricsWord in Words)
         {
             lyricsLine.Words.Add(lyricsWord.Clone(lyricsLine));

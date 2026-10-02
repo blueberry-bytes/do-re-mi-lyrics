@@ -4,6 +4,15 @@
 	</head>
 	<body style="font-family: Calibri">
 		<p>
+			<b>v1.3.1 - 2026-10-02</b>
+			<ul>
+				<li>- removed the light orange highlight of uncertain lines (most of them were fine and some bad ones were missed)</li>
+				<li>- saving lyrics to the audio file keeps the play position and continues playing if the song was playing</li>
+				<li>- opening another audio file while playing shows the play button again</li>
+				<li>- saving, opening files and the "Save changes?" question leave the edit mode (F12) first, so the edited text is not lost</li>
+				<li>- the synchronization button is placed before the edit mode button</li>
+				<li>- pasted lyrics: inverted question and exclamation marks and colons are removed too (timestamps are kept)</li>
+			</ul>
 			<b>v1.3.0 - 2026-10-01</b>
 			<ul>
 				<li>- added automatic synchronization (F11) of English songs, based on WhisperX speech recognition and Demucs vocal separation</li>

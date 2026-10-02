@@ -8,12 +8,11 @@
 	<p><b>Colors</b></p>
 	<p>
 		<b>Red time</b> - it's earlier than the previous one and it should be corrected<br />
-		<b>Light orange line</b> - the automatic synchronization may be inaccurate, check it (the mark disappears after changing a time in this line)<br />
 	</p>
 	<p><b>Pasting lyrics</b></p>
 	<p>Text pasted from the clipboard (Ctrl+V) is cleaned up: punctuation and other special characters, text in square brackets (e.g. [Chorus]) and empty lines are removed and numbers are written as words (1990 - nineteen ninety). Timestamps of already synchronized lyrics are kept.</p>
 	<p><b>Automatic synchronization (F11)</b></p>
-	<p>Open the audio file and the lyrics, then press F11. The program separates the vocals from the music, recognizes the sung words and sets the times of your lyrics' words. The text of your lyrics is never changed. It works for English songs and takes about a minute and a half for a song. On the first use it downloads its components (about 3 GB, an internet connection is needed), which takes a few more minutes. Esc cancels the synchronization. Lines that may be inaccurate are highlighted in light orange. Ctrl+Z restores the lyrics from before the synchronization.</p>
+	<p>Open the audio file and the lyrics, then press F11. The program separates the vocals from the music, recognizes the sung words and sets the times of your lyrics' words. The text of your lyrics is never changed. It works for English songs and takes about a minute and a half for a song. On the first use it downloads its components (about 3 GB, an internet connection is needed), which takes a few more minutes. Esc cancels the synchronization. Ctrl+Z restores the lyrics from before the synchronization.</p>
 	<p>Ctrl+F11 (or the synchronization button with Ctrl held) synchronizes only the line with the highlighted word, between its start and the start of the next line (or the end of its last word, if it has one), 0.25 s wider on both sides. Correct the line edges first (F6 on its first word and on the first word of the next line) and let the program set the words inside. Ctrl+Z restores the line from before it.</p>
 	<p><b>How to split a word into parts?</b></p>
 	<p>Sometimes one syllable in a word is being sung several times longer than the rest. Then the word can be split into two or more parts. Enter edit mode (F12), write vertical bar character | in the place where you want to split and leave the edit mode (F12). Now you can set the time for every part of the word separately.</p>

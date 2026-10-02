@@ -267,6 +267,7 @@ public class Audio : IDisposable
             return;
         }
 
+        bool wasPlaying = _waveOut.PlaybackState == PlaybackState.Playing;
         Pause();
         TimeSpan currentTime = CurrentTime;
         CloseWaveOut();
@@ -278,6 +279,11 @@ public class Audio : IDisposable
         {
             OpenAudio();
             CurrentTime = currentTime;
+            Global.MainWindowViewModel.RefreshPlayPosition();
+            if (wasPlaying)
+            {
+                Play();
+            }
         }
     }
 
@@ -325,6 +331,8 @@ public class Audio : IDisposable
     {
         _waveOut.Stop();
         _waveOut.Dispose();
+        Global.MainWindowViewModel.StopTimer();
+        Global.MainWindowViewModel.ChangeButtonToPlay();
 
         _processorStream?.Dispose();
         _waveChannel?.Dispose();
@@ -335,7 +343,7 @@ public class Audio : IDisposable
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs args)
     {
-        if (_waveOut.PlaybackState == PlaybackState.Stopped)
+        if (sender == _waveOut && _waveOut.PlaybackState == PlaybackState.Stopped)
         {
             Stop();
         }
